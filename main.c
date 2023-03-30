@@ -1,13 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "gui.h"
 #include "board.h"
-//#include "pieces.h"
 
-
-int  main(void) {
+int main(void) {
     board b = {};
     init_board(b);
-    print_board(b);
+    init_gui(b); 
     return EXIT_SUCCESS;
 }

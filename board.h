@@ -3,15 +3,12 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <ncurses.h>
 #include "pieces.h"
 #include "players.h"
 
 #define N_RANKS 8
 #define N_FILES 8
-
-#define ANSI_WHITE_ESC "\33[38;5;0;48;5;255m"
-#define ANSI_BLACK_ESC "\33[38;5;255;48;5;0m"
-#define ANSI_RESET  "\33[m"
 
 
 typedef unsigned short int board[N_FILES][N_RANKS];
@@ -40,44 +37,6 @@ void init_board(board b) {
 
 bool is_white_square(int i, int j) {
     return i % 2 ^ j % 2;
-}
-
-void print_square(int boardpiece, int i, int j) {
-
-     int piece = board_to_piece(boardpiece);
-     char repr = get_piece_repr(piece);
-
-     if (
-            (boardpiece == 0 && is_white_square(i, j)) ||
-            (boardpiece != 0 && is_white_piece(boardpiece))
-        ) { 
-            printf(ANSI_WHITE_ESC);
-     } else {
-        printf(ANSI_BLACK_ESC);
-    }
-    printf("%c", repr);
-    printf(" ");
-    printf(ANSI_RESET);
-
-}
-
-void print_board(board b) {
-    for (int i = 0; i < N_RANKS + 2; i++){
-        printf("--");
-    }
-    printf("\n");
-    for (int i = 0; i < N_RANKS; i++) {
-        printf("| ");
-        for (int j = 0; j < N_FILES; j++) {
-            //printf("%d ", b[i][j]);
-            print_square(b[i][j], i, j);
-        }
-        printf(" |\n");
-    }
-    for (int i = 0; i < N_RANKS + 2; i++){
-        printf("--");
-    }
-    printf("\n");
 }
 
 #endif
