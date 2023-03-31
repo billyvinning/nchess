@@ -1,71 +1,57 @@
 #ifndef PIECES_H
 #define PIECES_H
-#define _WHITE_PIECE_REGISTER 1
-#define _BLACK_PIECE_REGISTER 10
 
 #include <stdbool.h>
+#include <math.h>
 #include "players.h"
 
 
 typedef enum {
-    PAWN = 0,
-    KNIGHT = 1,
-    BISHOP = 2,
-    ROOK = 3,
-    QUEEN = 4,
-    KING = 5
-} PieceID;
+    EMPTY_SQUARE = 0,
+    PAWN = 4,
+    KNIGHT = 8,
+    BISHOP = 16,
+    ROOK = 32,
+    QUEEN = 64,
+    KING = 128
+} PieceType;
 
 
-
-typedef enum {
-    WHITE_PAWN = _WHITE_PIECE_REGISTER + PAWN,
-    WHITE_KNIGHT = _WHITE_PIECE_REGISTER + KNIGHT,
-    WHITE_BISHOP = _WHITE_PIECE_REGISTER + BISHOP,
-    WHITE_ROOK = _WHITE_PIECE_REGISTER + ROOK,
-    WHITE_QUEEN = _WHITE_PIECE_REGISTER + QUEEN,
-    WHITE_KING = _WHITE_PIECE_REGISTER + KING,
-    BLACK_PAWN = _BLACK_PIECE_REGISTER + PAWN,
-    BLACK_KNIGHT = _BLACK_PIECE_REGISTER + KNIGHT,
-    BLACK_BISHOP = _BLACK_PIECE_REGISTER + BISHOP,
-    BLACK_ROOK = _BLACK_PIECE_REGISTER + ROOK,
-    BLACK_QUEEN = _BLACK_PIECE_REGISTER + QUEEN,
-    BLACK_KING = _BLACK_PIECE_REGISTER + KING,
-} BoardPieceID;
-
-
-bool is_white_piece(BoardPieceID p) {
-    return p < _BLACK_PIECE_REGISTER && p >= _WHITE_PIECE_REGISTER;
+int get_piece_owner(int piece) {
+    if (piece == EMPTY_SQUARE) {
+        return NOOWNER;
+    }
+    else {
+        if ((piece & WHITE) == WHITE) {
+            return WHITE;
+        }
+        else {
+            return BLACK;
+        }
+    }
 }
 
 
-int piece_to_board(Player p, PieceID i) {
-    int offset;
-    switch (p) {
-        case WHITE:
-            offset = _WHITE_PIECE_REGISTER;
-            break;
-        case BLACK:
-            offset = _BLACK_PIECE_REGISTER;
-            break;
+int get_piece_type(int piece) {
+    if (piece == EMPTY_SQUARE) {
+        return EMPTY_SQUARE;
     }
-    return i + offset;
-} 
-
-
-int board_to_piece(BoardPieceID i) {
-    int offset;
-    if (is_white_piece(i)) {
-        offset = _WHITE_PIECE_REGISTER;
-    } else {
-        offset = _BLACK_PIECE_REGISTER;
-    }
-    return i - offset;
+    return piece ^ get_piece_owner(piece);
 }
 
 
-char get_piece_repr(PieceID p) {
-    switch (p) {
+int get_piece(PieceType type, Player player) {
+    if (type == EMPTY_SQUARE || player == NOOWNER) {
+        return EMPTY_SQUARE;
+    }
+    return player & type;
+}
+
+
+char get_piece_repr(PieceType type) {
+    switch (type) {
+        case EMPTY_SQUARE:
+            return ' ';
         case PAWN:
             return 'p';
         case KNIGHT:
@@ -78,41 +64,114 @@ char get_piece_repr(PieceID p) {
             return 'Q';
         case KING:
             return 'K';
+        default:
+            return '!';
     }
-    return ' ';
 }
 
-//
-//typedef struct {
-//    PieceID pieceid; 
-//    char label;
-//}
-//Piece;
-//
-//
-//const Piece Pawn = {PAWN, "p"};
-//
-//const Piece Knight = {KNIGHT, "h"};
-//
-//const Piece Bishop = {BISHOP, "b"};
-//
-//const Piece Rook = {ROOK, "r"};
-//
-//const Piece Queen = {QUEEN, "q"};
-//
-//static const Piece King = {KING, "k"};
-//
 
-void get_valid_pawn_moves();
+bool is_valid_pawn_move(
+    int x1, int y1, int x2, int y2, bool is_white_piece, bool is_taking_move
+) {
+    int dx = x2 - x1;
+    int dy = y2 - y1;
 
-void get_valid_knight_moves();
+    int origin;
+    if (is_white_piece) {
+        origin = 6;
+        dy = -1 * dy;
+    } else {
+        origin = 1;
+    }
+    // Must march one or two squares.
+    if (y1 == origin && ((dy < 1) || (dy > 2))) {
+        return false;
+    } else if (y1 != origin && dy != 1) {
+        return false;
+    }
 
-void get_valid_bishop_moves();
+    if (is_taking_move && dx == 0) {
+        return false;
+    } else if (!is_taking_move && dx != 0) {
+        return false;
+    }
 
-void get_valid_rook_moves();
+    return true;
+}
 
-void get_valid_queen_moves();
+bool is_valid_knight_move(
+    int x1, int y1, int x2, int y2 
+) {
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    return (dx == 2 && dy == 1) ^ (dx == 1 && dy == 2);
+}
 
-void get_valid_king_moves();
+
+bool is_valid_bishop_move(
+    int x1, int y1, int x2, int y2
+) {
+    return abs(x2 - x1) == abs(y2 - y1);
+}
+
+
+bool is_valid_rook_move(
+    int x1, int y1, int x2, int y2
+) {
+    return (abs(x2 - x1) > 0) ^ (abs(y2 - y1) > 0);
+}
+
+
+bool is_valid_queen_move(
+    int x1, int y1, int x2, int y2
+) {
+    return is_valid_bishop_move(x1, y1, x2, y2) || is_valid_rook_move(x1, y1, x2, y2);
+}
+
+
+bool is_valid_king_move(
+    int x1, int y1, int x2, int y2
+) {
+    return abs(x2 - x1) == 1 || abs(y2 - y1) == 1;
+}
+
+
+bool is_valid_move(int piece_1, int piece_2, int x1, int y1, int x2, int y2) {
+    // Cannot move empty square.
+    if (piece_1 == EMPTY_SQUARE) {
+        return false;
+    }
+
+    int piece_1_owner = get_piece_owner(piece_1);
+    int piece_2_owner = get_piece_owner(piece_2);
+    // Cannot move piece onto own piece.
+    if (piece_1_owner == piece_2_owner) {
+        return false;
+    }
+
+    bool is_taking_move = piece_2 != EMPTY_SQUARE;
+    // Cannot take a king.
+    if (is_taking_move && get_piece_type(piece_2) == KING) {
+        return false;
+    }
+    int piece_1_type = get_piece_type(piece_1);
+    switch (piece_1_type) {
+        case PAWN:
+            return is_valid_pawn_move(x1, y1, x2, y2, piece_1_owner == WHITE, is_taking_move);
+        case KNIGHT:
+            return is_valid_knight_move(x1, y1, x2, y2);
+        case BISHOP:
+            return is_valid_bishop_move(x1, y1, x2, y2);
+        case ROOK:
+            return is_valid_rook_move(x1, y1, x2, y2);
+        case QUEEN:
+            return is_valid_queen_move(x1, y1, x2, y2);
+        case KING:
+            return is_valid_king_move(x1, y1, x2, y2);
+        default: 
+            return false;
+    }
+    return true;
+}
 
 #endif

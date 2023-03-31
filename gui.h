@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 #include "board.h"
+#include "pieces.h"
 
 #define WIN_PADDING 1
 #define SQUARE_WIDTH 3
@@ -19,23 +20,16 @@ void transform_to_win(int * x, int * y) {
 
 
 void transform_to_board(int * x, int * y) {
-    *x = (*x - 2) / SQUARE_WIDTH;
-    *y = (*y - 2) / SQUARE_WIDTH;
+    *x = (*x - WIN_PADDING) / SQUARE_WIDTH;
+    *y = (*y - WIN_PADDING);
     return;
 }
 
 void update_cursor(WINDOW * win, int x, int y) {
-
-    char v[SQUARE_WIDTH];
-    
-    for (int i = 0; i < SQUARE_WIDTH; i++) {
-        v[i] = mvwinch(win, y, x + i);
-    }
-
+    wmove(win, y, x);
     wattron(win, A_UNDERLINE);
-    mvwprintw(win, y, x, "%s", v);
+    //wrefresh(win);
     wattroff(win, A_UNDERLINE);
-    wrefresh(win);
 }
 
 
@@ -83,7 +77,7 @@ int get_colour_pair(bool is_white_square, bool is_white_piece) {
 
 void print_square(WINDOW * win, board b, int i, int j) {
     int colour_pair = get_colour_pair(
-        is_white_square(i, j), is_white_piece(b[i][j])
+        is_white_square(i, j), get_piece_owner(b[i][j]) == WHITE
     );
     wattron(win, COLOR_PAIR(colour_pair));
 
@@ -94,10 +88,9 @@ void print_square(WINDOW * win, board b, int i, int j) {
     if (b[i][j] == 0) {
         piece_repr = ' ';
     } else {
-        int piece = board_to_piece(b[i][j]);
+        int piece = get_piece_type(b[i][j]);
         piece_repr = get_piece_repr(piece);
     }
-    
 
     mvwprintw(win, y, x, " %c ", piece_repr);
     wattroff(win, COLOR_PAIR(colour_pair));    
@@ -124,6 +117,8 @@ int init_gui(board b) {
     noecho();
     int x = WIN_PADDING;
     int y = WIN_HEIGHT - 1 - WIN_PADDING;
+    int selected_x = -1;
+    int selected_y = -1;
     WINDOW * win = new_win();
     print_board(win, b);
     update_cursor(win, x, y);
@@ -153,6 +148,26 @@ int init_gui(board b) {
                     x = WIN_PADDING;
                 else
                     x += SQUARE_WIDTH;
+                break;
+            case ' ':
+                if (selected_x == -1){
+                    selected_x = x;
+                    selected_y = y;
+                } else {
+                    int board_x1 = selected_x;
+                    int board_y1 = selected_y;
+                    int board_x2 = x;
+                    int board_y2 = y;
+                    transform_to_board(&board_x1, &board_y1);
+                    transform_to_board(&board_x2, &board_y2);
+                    if (!make_move(b, board_x1, board_y1, board_x2, board_y2)) {
+                        wmove(win, selected_y, selected_x);
+                    }
+                    else {
+                    }
+                    selected_x = -1;
+                    selected_y = -1;
+                }
                 break;
             default:
                 //refresh();
