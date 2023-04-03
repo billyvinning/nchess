@@ -4,34 +4,29 @@
 #include <string.h>
 #include <stdio.h>
 #include <ncurses.h>
+
 #include "pieces.h"
 #include "players.h"
-
-#define N_RANKS 8
-#define N_FILES 8
-
-
-typedef short int board[N_FILES][N_RANKS];
+#include "rules.h"
+#include "geom.h"
 
 
 void init_board(board b) {
-    int black_back_rank = 0;
-    int white_back_rank = N_RANKS - 1;
     for (int i = 0; i < N_FILES; i++) {
-        b[black_back_rank + 1][i] = BLACK | PAWN;
-        b[white_back_rank - 1][i] = WHITE | PAWN;
+        b[BLACK_PAWN_ORIGIN][i] = BLACK | PAWN;
+        b[WHITE_PAWN_ORIGIN][i] = WHITE | PAWN;
     }
-    b[black_back_rank][0] = b[black_back_rank][N_FILES - 1] = BLACK | ROOK;
-    b[black_back_rank][1] = b[black_back_rank][N_FILES - 2] = BLACK | KNIGHT;
-    b[black_back_rank][2] = b[black_back_rank][N_FILES - 3] = BLACK | BISHOP;
-    b[black_back_rank][3] = BLACK | QUEEN;
-    b[black_back_rank][4] = BLACK | KING;
+    b[BLACK_BACK_RANK][0] = b[BLACK_BACK_RANK][N_FILES - 1] = BLACK | ROOK;
+    b[BLACK_BACK_RANK][1] = b[BLACK_BACK_RANK][N_FILES - 2] = BLACK | KNIGHT;
+    b[BLACK_BACK_RANK][2] = b[BLACK_BACK_RANK][N_FILES - 3] = BLACK | BISHOP;
+    b[BLACK_BACK_RANK][3] = BLACK | QUEEN;
+    b[BLACK_BACK_RANK][4] = BLACK | KING;
 
-    b[white_back_rank][0] = b[white_back_rank][N_FILES - 1] = WHITE | ROOK;
-    b[white_back_rank][1] = b[white_back_rank][N_FILES - 2] = WHITE | KNIGHT;
-    b[white_back_rank][2] = b[white_back_rank][N_FILES - 3] = WHITE | BISHOP;
-    b[white_back_rank][3] = WHITE | QUEEN;
-    b[white_back_rank][4] = WHITE | KING;
+    b[WHITE_BACK_RANK][0] = b[WHITE_BACK_RANK][N_FILES - 1] = WHITE | ROOK;
+    b[WHITE_BACK_RANK][1] = b[WHITE_BACK_RANK][N_FILES - 2] = WHITE | KNIGHT;
+    b[WHITE_BACK_RANK][2] = b[WHITE_BACK_RANK][N_FILES - 3] = WHITE | BISHOP;
+    b[WHITE_BACK_RANK][3] = WHITE | QUEEN;
+    b[WHITE_BACK_RANK][4] = WHITE | KING;
 }
 
 
@@ -41,7 +36,7 @@ bool is_white_square(int i, int j) {
 
 
 bool make_move(board b, int x1, int y1, int x2, int y2) {
-    if (!is_valid_move(b[y1][x1], b[y2][x2], x1, y1, x2, y2)) {
+    if (!is_valid_move(b, x1, y1, x2, y2)) {
         return false;
     }
     b[y2][x2] = b[y1][x1];

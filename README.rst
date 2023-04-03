@@ -6,7 +6,7 @@ Chess in the terminal; written in C99.
 Build
 -----
 
-To build the package with GCC 12.2.1, execute the following:
+The only dependency is `ncurses`. To build the package with GCC 12.2.1, execute the following:
 
 .. code-block:: console
 
