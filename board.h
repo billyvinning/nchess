@@ -39,8 +39,20 @@ bool make_move(board b, int x1, int y1, int x2, int y2) {
     if (!is_valid_move(b, x1, y1, x2, y2)) {
         return false;
     }
-    b[y2][x2] = b[y1][x1];
+    
+    int piece_owner = get_piece_owner(b[y1][x1]);
+    if (
+        get_piece_type(b[y1][x1]) == PAWN && (
+            (piece_owner == WHITE && y2 == BLACK_BACK_RANK) ||
+            (piece_owner == BLACK && y2 == WHITE_BACK_RANK)
+        )
+    ) 
+        b[y2][x2] = QUEEN | piece_owner;
+    else
+        b[y2][x2] = b[y1][x1];
+    
     b[y1][x1] = EMPTY_SQUARE;
+
     return true;
 }
 
