@@ -13,38 +13,38 @@ typedef enum {
     BLACK_IN_CHECK = 0x08,
     WHITE_CAN_CASTLE = 0x10,
     BLACK_CAN_CASTLE = 0x20,
-    WHITE_CAN_ENPASSENT = 0x40,
-    BLACK_CAN_ENPASSENT = 0x80,
-    CAN_ENPASSENT_APAWN = 0x100,
-    CAN_ENPASSENT_BPAWN = 0x200,
-    CAN_ENPASSENT_CPAWN = 0x400,
-    CAN_ENPASSENT_DPAWN = 0x800,
-    CAN_ENPASSENT_EPAWN = 0x1000,
-    CAN_ENPASSENT_FPAWN = 0x2000,
-    CAN_ENPASSENT_GPAWN = 0x4000,
-    CAN_ENPASSENT_HPAWN = 0x8000
+    WHITE_CAN_ENPASSANT = 0x40,
+    BLACK_CAN_ENPASSANT = 0x80,
+    CAN_ENPASSANT_APAWN = 0x100,
+    CAN_ENPASSANT_BPAWN = 0x200,
+    CAN_ENPASSANT_CPAWN = 0x400,
+    CAN_ENPASSANT_DPAWN = 0x800,
+    CAN_ENPASSANT_EPAWN = 0x1000,
+    CAN_ENPASSANT_FPAWN = 0x2000,
+    CAN_ENPASSANT_GPAWN = 0x4000,
+    CAN_ENPASSANT_HPAWN = 0x8000
 } GameMeta; 
 
 
-static const int ENPASSENT_FILES[] = {
-    CAN_ENPASSENT_APAWN,
-    CAN_ENPASSENT_BPAWN,
-    CAN_ENPASSENT_CPAWN,
-    CAN_ENPASSENT_DPAWN,
-    CAN_ENPASSENT_EPAWN,
-    CAN_ENPASSENT_FPAWN,
-    CAN_ENPASSENT_GPAWN,
-    CAN_ENPASSENT_HPAWN
+static const int ENPASSANT_FILES[] = {
+    CAN_ENPASSANT_APAWN,
+    CAN_ENPASSANT_BPAWN,
+    CAN_ENPASSANT_CPAWN,
+    CAN_ENPASSANT_DPAWN,
+    CAN_ENPASSANT_EPAWN,
+    CAN_ENPASSANT_FPAWN,
+    CAN_ENPASSANT_GPAWN,
+    CAN_ENPASSANT_HPAWN
 };
 
 
-int get_enpassent_flag(int file) {
-    return ENPASSENT_FILES[file];
+int get_enpassant_flag(int file) {
+    return ENPASSANT_FILES[file];
 }
 
-int get_enpassent_file(GameMeta flag) {
+int get_enpassant_file(GameMeta flag) {
     for (int i = 0; i < N_FILES; i++) {
-        if (flag & ENPASSENT_FILES[i])
+        if (flag & ENPASSANT_FILES[i])
             return i;
     }
     return -1;

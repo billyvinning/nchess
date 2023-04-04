@@ -37,24 +37,24 @@ bool is_white_square(int i, int j) {
 }
 
 
-void reset_enpassent(int piece, int * flags) {
+void reset_enpassant(int piece, int * flags) {
     
-    if (*flags & CAN_ENPASSENT_APAWN) *flags ^= CAN_ENPASSENT_APAWN;
-    if (*flags & CAN_ENPASSENT_BPAWN) *flags ^= CAN_ENPASSENT_BPAWN;
-    if (*flags & CAN_ENPASSENT_CPAWN) *flags ^= CAN_ENPASSENT_CPAWN;
-    if (*flags & CAN_ENPASSENT_DPAWN) *flags ^= CAN_ENPASSENT_DPAWN;
-    if (*flags & CAN_ENPASSENT_EPAWN) *flags ^= CAN_ENPASSENT_EPAWN;
-    if (*flags & CAN_ENPASSENT_FPAWN) *flags ^= CAN_ENPASSENT_FPAWN;
-    if (*flags & CAN_ENPASSENT_GPAWN) *flags ^= CAN_ENPASSENT_GPAWN;
-    if (*flags & CAN_ENPASSENT_HPAWN) *flags ^= CAN_ENPASSENT_HPAWN;
+    if (*flags & CAN_ENPASSANT_APAWN) *flags ^= CAN_ENPASSANT_APAWN;
+    if (*flags & CAN_ENPASSANT_BPAWN) *flags ^= CAN_ENPASSANT_BPAWN;
+    if (*flags & CAN_ENPASSANT_CPAWN) *flags ^= CAN_ENPASSANT_CPAWN;
+    if (*flags & CAN_ENPASSANT_DPAWN) *flags ^= CAN_ENPASSANT_DPAWN;
+    if (*flags & CAN_ENPASSANT_EPAWN) *flags ^= CAN_ENPASSANT_EPAWN;
+    if (*flags & CAN_ENPASSANT_FPAWN) *flags ^= CAN_ENPASSANT_FPAWN;
+    if (*flags & CAN_ENPASSANT_GPAWN) *flags ^= CAN_ENPASSANT_GPAWN;
+    if (*flags & CAN_ENPASSANT_HPAWN) *flags ^= CAN_ENPASSANT_HPAWN;
 
     int p = get_piece_owner(piece); 
-    if (p == WHITE && (*flags & WHITE_CAN_ENPASSENT)) {
-        *flags = *flags ^ WHITE_CAN_ENPASSENT;
+    if (p == WHITE && (*flags & WHITE_CAN_ENPASSANT)) {
+        *flags = *flags ^ WHITE_CAN_ENPASSANT;
     } else if (
-        p == BLACK && (*flags & BLACK_CAN_ENPASSENT)
+        p == BLACK && (*flags & BLACK_CAN_ENPASSANT)
     ) {
-        *flags = *flags ^ BLACK_CAN_ENPASSENT;
+        *flags = *flags ^ BLACK_CAN_ENPASSANT;
     }
 }
 
@@ -71,14 +71,14 @@ void make_regular_move(board b, int x1, int y1, int x2, int y2, int * game_meta)
     else
         b[y2][x2] = b[y1][x1];
     
-    reset_enpassent(b[y1][x1], game_meta);
+    reset_enpassant(b[y1][x1], game_meta);
     if (get_piece_type(b[y1][x1]) == PAWN && abs(y2 - y1) == 2) {
-        int file_flag = get_enpassent_flag(x1);
+        int file_flag = get_enpassant_flag(x1);
         int player_flag;
         if (piece_owner == WHITE)
-            player_flag = BLACK_CAN_ENPASSENT;
+            player_flag = BLACK_CAN_ENPASSANT;
         else
-            player_flag = WHITE_CAN_ENPASSENT;
+            player_flag = WHITE_CAN_ENPASSANT;
         *game_meta |= file_flag | player_flag;
     }
     
@@ -86,8 +86,8 @@ void make_regular_move(board b, int x1, int y1, int x2, int y2, int * game_meta)
 }
 
 
-void make_enpassent_move(board b, int x1, int y1, int x2, int y2, int * game_meta) {
-    reset_enpassent(b[y1][x1], game_meta);
+void make_enpassant_move(board b, int x1, int y1, int x2, int y2, int * game_meta) {
+    reset_enpassant(b[y1][x1], game_meta);
     b[y2][x2] = b[y1][x1];
     b[y1][x1] = EMPTY_SQUARE;
     b[y1][x2] = EMPTY_SQUARE; // Remove passed pawn.
@@ -95,7 +95,7 @@ void make_enpassent_move(board b, int x1, int y1, int x2, int y2, int * game_met
 
 
 void make_castling_move(board b, int x1, int y1, int x2, int y2, int * game_meta) {
-    reset_enpassent(b[y1][x1], game_meta);
+    reset_enpassant(b[y1][x1], game_meta);
     b[y2][x2] = b[y1][x1];
     if (x2 == N_FILES - 2) { // Short castle.
         b[y2][x2 - 1] = b[y2][N_FILES - 1];
@@ -120,8 +120,8 @@ bool make_move(board b, int x1, int y1, int x2, int y2, int * game_meta) {
         case CASTLING:
             make_castling_move(b, x1, y1, x2, y2, game_meta);
             break;
-        case ENPASSENT:
-            make_enpassent_move(b, x1, y1, x2, y2, game_meta);
+        case ENPASSANT:
+            make_enpassant_move(b, x1, y1, x2, y2, game_meta);
             break;
         default:
             return false;

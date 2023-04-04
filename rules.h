@@ -8,7 +8,7 @@
 
 #define ADJ_M_WIDTH N_RANKS * N_FILES
 
-typedef enum {INVALID_MOVE=0, REGULAR_MOVE=1, CASTLING=2, ENPASSENT=3} MoveCodes;
+typedef enum {INVALID_MOVE=0, REGULAR_MOVE=1, CASTLING=2, ENPASSANT=3} MoveCodes;
 
 
 int transform_to_adj(int i, int j) {
@@ -74,15 +74,15 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int * ga
     int src_node = transform_to_adj(x0, y0);
     int direction;
     bool is_on_back_rank = false;
-    bool can_enpassent;
+    bool can_enpassant;
     if (src_owner == WHITE) {
-        can_enpassent = *game_meta & WHITE_CAN_ENPASSENT;
+        can_enpassant = *game_meta & WHITE_CAN_ENPASSANT;
         if (y0 == WHITE_PAWN_ORIGIN)
             is_on_back_rank = true;
         direction = -1;
     }
     else if (src_owner == BLACK) {
-        can_enpassent = *game_meta & BLACK_CAN_ENPASSENT;
+        can_enpassant = *game_meta & BLACK_CAN_ENPASSANT;
         if (y0 == BLACK_PAWN_ORIGIN)
             is_on_back_rank = true;
         direction = 1;
@@ -103,15 +103,15 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int * ga
     }
 
     int x;
-    int enpassent_file = get_enpassent_file(*game_meta);
+    int enpassant_file = get_enpassant_file(*game_meta);
     const int dx[] = {1, -1};
     for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
         x = x0 + dx[i];
         if (x < 0 || x >= N_FILES)
             continue;
         curr_node = transform_to_adj(x, y);
-        if (b[y][x] == EMPTY_SQUARE && can_enpassent && x == enpassent_file) {
-            m[src_node][curr_node] = ENPASSENT;
+        if (b[y][x] == EMPTY_SQUARE && can_enpassant && x == enpassant_file) {
+            m[src_node][curr_node] = ENPASSANT;
         }
         else if (b[y][x] != EMPTY_SQUARE && get_piece_owner(b[y][x]) != src_owner) {
             m[src_node][curr_node] = REGULAR_MOVE;
