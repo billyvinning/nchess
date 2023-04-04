@@ -12,6 +12,46 @@
 
 
 
+void print_game_meta_debug(WINDOW * win, int flags) {
+    const char * flag_names[] = {
+       "WHITES_TURN",
+       "BLACKS_TURN",
+       "WHITE_IN_CHECK",
+       "BLACK_IN_CHECK",
+       "WHITE_CAN_ENPASSENT",
+       "BLACK_CAN_ENPASSENT",
+       "CAN_ENPASSENT_APAWN",
+       "CAN_ENPASSENT_BPAWN",
+       "CAN_ENPASSENT_CPAWN",
+       "CAN_ENPASSENT_DPAWN",
+       "CAN_ENPASSENT_EPAWN",
+       "CAN_ENPASSENT_FPAWN",
+       "CAN_ENPASSENT_GPAWN",
+       "CAN_ENPASSENT_HPAWN",
+    };
+
+    const int flag_values[] = {
+        WHITES_TURN,
+        BLACKS_TURN,
+        WHITE_IN_CHECK,
+        BLACK_IN_CHECK,
+        WHITE_CAN_ENPASSENT,
+        BLACK_CAN_ENPASSENT,
+        CAN_ENPASSENT_APAWN,
+        CAN_ENPASSENT_BPAWN,
+        CAN_ENPASSENT_CPAWN,
+        CAN_ENPASSENT_DPAWN,
+        CAN_ENPASSENT_EPAWN,
+        CAN_ENPASSENT_FPAWN,
+        CAN_ENPASSENT_GPAWN,
+        CAN_ENPASSENT_HPAWN,
+    };
+    for (int i = 0; i < (sizeof(flag_values) / sizeof(int) ); i++) {
+        mvprintw(i, 0, "                    ");
+        mvprintw(i, 0, "%s %d", flag_names[i], (flags & flag_values[i]) == flag_values[i]);
+    }
+}
+
 void transform_to_win(int * x, int * y) {
     *x = (SQUARE_WIDTH * (*x)) + WIN_PADDING;
     *y = (*y + WIN_PADDING);
@@ -109,7 +149,7 @@ void print_board(WINDOW * win, board b) {
 }
 
 
-int init_gui(board b) {
+int init_gui(board b, int * game_meta) {
     initscr();
     if (!init_colours())
         return EXIT_FAILURE;
@@ -121,6 +161,7 @@ int init_gui(board b) {
     int selected_y = -1;
     WINDOW * win = new_win();
     print_board(win, b);
+    print_game_meta_debug(win, *game_meta);
     update_cursor(win, x, y);
     while (1) {
         int ch = wgetch(win);
@@ -160,7 +201,7 @@ int init_gui(board b) {
                     int board_y2 = y;
                     transform_to_board(&board_x1, &board_y1);
                     transform_to_board(&board_x2, &board_y2);
-                    if (!make_move(b, board_x1, board_y1, board_x2, board_y2)) {
+                    if (!make_move(b, board_x1, board_y1, board_x2, board_y2, game_meta)) {
                         wmove(win, selected_y, selected_x);
                     }
                     else {
@@ -175,6 +216,7 @@ int init_gui(board b) {
         }
         win = new_win();
         print_board(win, b);
+        print_game_meta_debug(win, *game_meta);
         update_cursor(win, x, y);
     }
 }

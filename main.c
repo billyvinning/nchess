@@ -3,10 +3,13 @@
 
 #include "gui.h"
 #include "board.h"
+#include "game.h"
+
 
 int main(void) {
     board b = {};
     init_board(b);
-    init_gui(b); 
+    int game_meta = init_game();
+    init_gui(b, &game_meta); 
     return EXIT_SUCCESS;
 }
