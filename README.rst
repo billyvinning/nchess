@@ -13,6 +13,16 @@ The only dependency is `ncurses`. To build the package with GCC 12.2.1, execute 
     make clean && make
 
 
+Contributing
+------------
+
+The dependencies are `uncrustify` and `include-what-you-use`; to install the pre-commit hooks, execute the following:
+
+.. code-block:: console
+
+    pre-commit install
+
+
 License
 -------
 

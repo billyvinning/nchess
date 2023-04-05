@@ -2,6 +2,7 @@
 #define GUI_H
 
 #include <ncurses.h>
+#include <math.h>
 #include "board.h"
 #include "pieces.h"
 
@@ -14,9 +15,9 @@
 #define WHITE_PIECE_COLOUR COLOR_BLUE
 #define BLACK_SQUARE_COLOUR COLOR_BLACK
 #define WHITE_SQUARE_COLOUR COLOR_WHITE
-#define HIGHLIGHTED_SQUARE_COLOUR COLOR_CYAN
-
-typedef enum {WHITE_SQUARE=0x4, BLACK_SQUARE=0x8, HIGHLIGHTED_SQUARE=0x10} SquareBackgroundType;
+#define WHITE_HIGHLIGHTED_SQUARE_COLOUR COLOR_CYAN
+#define BLACK_HIGHLIGHTED_SQUARE_COLOUR COLOR_MAGENTA
+typedef enum {WHITE_SQUARE=0x4, BLACK_SQUARE=0x8, WHITE_HIGHLIGHTED_SQUARE=0x10, BLACK_HIGHLIGHTED_SQUARE=0x20} SquareBackgroundType;
 
 void print_game_meta_debug(WINDOW * win, int flags) {
     const char * flag_names[] = {
@@ -97,8 +98,8 @@ bool init_colours(void) {
     }
     start_color();
     
-    const int square_background_types[] = {WHITE_SQUARE, BLACK_SQUARE, HIGHLIGHTED_SQUARE};
-    const int square_background_colours[] = {WHITE_SQUARE_COLOUR, BLACK_SQUARE_COLOUR, HIGHLIGHTED_SQUARE_COLOUR};
+    const int square_background_types[] = {WHITE_SQUARE, BLACK_SQUARE, WHITE_HIGHLIGHTED_SQUARE, BLACK_HIGHLIGHTED_SQUARE};
+    const int square_background_colours[] = {WHITE_SQUARE_COLOUR, BLACK_SQUARE_COLOUR, WHITE_HIGHLIGHTED_SQUARE_COLOUR, BLACK_HIGHLIGHTED_SQUARE_COLOUR};
 
     for (int i = 0; i < sizeof(square_background_types) / sizeof(int); i++) {
         init_pair(
@@ -115,30 +116,41 @@ bool init_colours(void) {
     return true;
 }
 
-
-void print_square(WINDOW * win, board b, int x, int y, bool is_highlighted) {
-    int piece_owner = get_piece_owner(b[y][x]);
+int get_colour_pair(board b, int x1, int y1, int x2, int y2, int game_meta) {
     int background_type;
-    if (is_highlighted) {
-        background_type = HIGHLIGHTED_SQUARE; 
-    } else if (is_white_square(x, y)) {
-        background_type = WHITE_SQUARE;
-    }
-    else {
-        background_type = BLACK_SQUARE;
-    }  
-    if (piece_owner == NOOWNER)
-        piece_owner = WHITE;
+    bool is_highlighted = x1 != -1 && y1 != -1 && is_valid_move(b, x1, y1, x2, y2, game_meta);
 
-    int colour_pair = COLOR_PAIR(piece_owner | background_type);
-    int x_t = x;
-    int y_t = y;
+    if (is_highlighted) {
+        if (get_piece_owner(b[y1][x1]) == WHITE) {
+            background_type = WHITE_HIGHLIGHTED_SQUARE;
+        } else {
+            background_type = BLACK_HIGHLIGHTED_SQUARE;
+        }
+    } else {
+        if (is_white_square(x2, y2)) {
+            background_type = WHITE_SQUARE;
+        } else {
+            background_type = BLACK_SQUARE;
+        }
+    }
+
+    int square_owner = get_piece_owner(b[y2][x2]);
+    if (square_owner == NOOWNER)
+        square_owner = WHITE;
+
+    return COLOR_PAIR(square_owner | background_type);
+}
+
+void print_square(WINDOW * win, board b, int x1, int y1, int x2, int y2, int game_meta) {
+    int colour_pair = get_colour_pair(b, x1, y1, x2, y2, game_meta);
+    int x_t = x2;
+    int y_t = y2;
     transform_to_win(&x_t, &y_t);
     char piece_repr;
-    if (b[y][x] == 0) {
+    if (b[y2][x2] == 0) {
         piece_repr = ' ';
     } else {
-        int piece = get_piece_type(b[y][x]);
+        int piece = get_piece_type(b[y2][x2]);
         piece_repr = get_piece_repr(piece);
     }
 
@@ -150,20 +162,14 @@ void print_square(WINDOW * win, board b, int x, int y, bool is_highlighted) {
 }
 
 
-void print_board(WINDOW * win, board b, int x_selected, int y_selected, int game_meta) {
-    
-    bool is_highlighted;
-    if (x_selected != -1 && y_selected != -1) {
-        transform_to_board(&x_selected, &y_selected); 
+void print_board(WINDOW * win, board b, int x1, int y1, int game_meta) {
+
+    if (x1 != -1 && y1 != -1) {
+        transform_to_board(&x1, &y1); 
     }
-    for (int y = 0; y < N_FILES; y++) {
-        for (int x = 0; x < N_RANKS; x++) {
-            if (x_selected == -1) {
-                is_highlighted = false;
-            } else {
-                is_highlighted = is_valid_move(b, x_selected, y_selected, x, y, game_meta);
-            }
-            print_square(win, b, x, y, is_highlighted);
+    for (int y2 = 0; y2 < N_FILES; y2++) {
+        for (int x2 = 0; x2 < N_RANKS; x2++) {
+            print_square(win, b, x1, y1, x2, y2, game_meta);
         }
     }
     wrefresh(win);
