@@ -1,9 +1,8 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <stdio.h>
 #include "geom.h"
-
+#include <stdio.h>
 
 typedef enum {
     NULL_META = 0x00,
@@ -23,24 +22,14 @@ typedef enum {
     CAN_ENPASSANT_FPAWN = 0x2000,
     CAN_ENPASSANT_GPAWN = 0x4000,
     CAN_ENPASSANT_HPAWN = 0x8000
-} GameMeta; 
+} GameMeta;
 
+static const int ENPASSANT_FILES[] = {CAN_ENPASSANT_APAWN, CAN_ENPASSANT_BPAWN,
+                                      CAN_ENPASSANT_CPAWN, CAN_ENPASSANT_DPAWN,
+                                      CAN_ENPASSANT_EPAWN, CAN_ENPASSANT_FPAWN,
+                                      CAN_ENPASSANT_GPAWN, CAN_ENPASSANT_HPAWN};
 
-static const int ENPASSANT_FILES[] = {
-    CAN_ENPASSANT_APAWN,
-    CAN_ENPASSANT_BPAWN,
-    CAN_ENPASSANT_CPAWN,
-    CAN_ENPASSANT_DPAWN,
-    CAN_ENPASSANT_EPAWN,
-    CAN_ENPASSANT_FPAWN,
-    CAN_ENPASSANT_GPAWN,
-    CAN_ENPASSANT_HPAWN
-};
-
-
-int get_enpassant_flag(int file) {
-    return ENPASSANT_FILES[file];
-}
+int get_enpassant_flag(int file) { return ENPASSANT_FILES[file]; }
 
 int get_enpassant_file(GameMeta flag) {
     for (int i = 0; i < N_FILES; i++) {
@@ -50,13 +39,11 @@ int get_enpassant_file(GameMeta flag) {
     return -1;
 }
 
-
 int init_game(void) {
     return WHITES_TURN | WHITE_CAN_CASTLE | BLACK_CAN_CASTLE;
 }
 
-
-void position_to_string(int x, int y, char * out, int buffersize) {
+void position_to_string(int x, int y, char *out, int buffersize) {
     static const char rank_labels[] = "abcdefgh";
     if (buffersize != 3)
         return;
@@ -64,8 +51,5 @@ void position_to_string(int x, int y, char * out, int buffersize) {
     sprintf(out, "%c%d", rank_labels[x], y + 1);
     out[buffersize - 1] = '\0';
 }
-
-
-
 
 #endif

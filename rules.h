@@ -1,30 +1,31 @@
 #ifndef RULES_H
 #define RULES_H
 
-#include <math.h>
-#include "pieces.h"
-#include "geom.h"
 #include "game.h"
+#include "geom.h"
+#include "pieces.h"
+#include <math.h>
 
-#define ADJ_M_WIDTH N_RANKS * N_FILES
+#define ADJ_M_WIDTH N_RANKS *N_FILES
 
-typedef enum {INVALID_MOVE=0, REGULAR_MOVE=1, CASTLING=2, ENPASSANT=3} MoveCodes;
+typedef enum {
+    INVALID_MOVE = 0,
+    REGULAR_MOVE = 1,
+    CASTLING = 2,
+    ENPASSANT = 3
+} MoveCodes;
 
+int transform_to_adj(int i, int j) { return i + (N_RANKS * j); }
 
-int transform_to_adj(int i, int j) {
-    return i + (N_RANKS * j);
-}
-
-
-void transform_from_adj(int v, int * x, int * y) {
+void transform_from_adj(int v, int *x, int *y) {
     int i = v % N_RANKS;
     int j = (v - i) / N_RANKS;
     *x = i;
     *y = j;
 }
 
-
-void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int dx, int dy, int max_steps) {
+void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
+                           int dx, int dy, int max_steps) {
     int x, y, curr_node, curr_node_owner;
     int src_node_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
@@ -38,7 +39,7 @@ void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int dx
             break;
         curr_node = transform_to_adj(x, y);
         curr_node_owner = get_piece_owner(b[y][x]);
-            
+
         if (curr_node_owner != src_node_owner) {
             m[prev_node][curr_node] = REGULAR_MOVE;
         }
@@ -53,7 +54,8 @@ void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int dx
     }
 }
 
-void add_diag_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int max_steps) {
+void add_diag_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
+                    int max_steps) {
     const int dx[] = {1, -1, -1, 1};
     const int dy[] = {1, 1, -1, -1};
     for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
@@ -61,10 +63,10 @@ void add_diag_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int max_steps
     }
 }
 
-
-void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int max_steps) {
-    //const int dx[] = {1, 0, -1, 0};
-    //const int dy[] = {0, 1, 0, -1};
+void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
+                        int max_steps) {
+    // const int dx[] = {1, 0, -1, 0};
+    // const int dy[] = {0, 1, 0, -1};
     const int dx[] = {0, -1, 0, 1};
     const int dy[] = {1, 0, -1, 0};
     for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
@@ -72,8 +74,8 @@ void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int max_s
     }
 }
 
-
-void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int game_meta) {
+void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
+                         int game_meta) {
     int curr_node;
     int src_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
@@ -85,14 +87,12 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int game
         if (y0 == WHITE_PAWN_ORIGIN)
             is_on_back_rank = true;
         direction = -1;
-    }
-    else if (src_owner == BLACK) {
+    } else if (src_owner == BLACK) {
         can_enpassant = game_meta & BLACK_CAN_ENPASSANT;
         if (y0 == BLACK_PAWN_ORIGIN)
             is_on_back_rank = true;
         direction = 1;
-    }
-    else {
+    } else {
         return;
     }
 
@@ -117,13 +117,12 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int game
         curr_node = transform_to_adj(x, y);
         if (b[y][x] == EMPTY_SQUARE && can_enpassant && x == enpassant_file) {
             m[src_node][curr_node] = ENPASSANT;
-        }
-        else if (b[y][x] != EMPTY_SQUARE && get_piece_owner(b[y][x]) != src_owner) {
+        } else if (b[y][x] != EMPTY_SQUARE &&
+                   get_piece_owner(b[y][x]) != src_owner) {
             m[src_node][curr_node] = REGULAR_MOVE;
         }
     }
 }
-
 
 void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
     int x, y, curr_node;
@@ -143,7 +142,6 @@ void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
     }
 }
 
-
 int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
     if (m[source][dest])
         return m[source][dest];
@@ -152,36 +150,35 @@ int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
             int rtn = has_path(m, i, dest);
             if (rtn)
                 return rtn;
-        
         }
     }
     return INVALID_MOVE;
 }
 
-
-int is_valid_piece_move(board b, int x1, int y1, int x2, int y2, int game_meta) { 
+int is_valid_piece_move(board b, int x1, int y1, int x2, int y2,
+                        int game_meta) {
     int m[ADJ_M_WIDTH][ADJ_M_WIDTH] = {{INVALID_MOVE}};
     switch (get_piece_type(b[y1][x1])) {
-        case PAWN:
-            add_pawn_like_edges(m, b, x1, y1, game_meta);
-            break;
-        case KNIGHT:
-            add_knight_like_edges(m, b, x1, y1);
-            break;
-        case BISHOP:
-            add_diag_edges(m, b, x1, y1, -1);
-            break;
-        case ROOK:
-            add_straight_edges(m, b, x1, y1, -1);
-            break;
-        case QUEEN:
-            add_straight_edges(m, b, x1, y1, -1);
-            add_diag_edges(m, b, x1, y1, -1);
-            break;
-        case KING:
-            add_straight_edges(m, b, x1, y1, 1);
-            add_diag_edges(m, b, x1, y1, 1);
-            break;
+    case PAWN:
+        add_pawn_like_edges(m, b, x1, y1, game_meta);
+        break;
+    case KNIGHT:
+        add_knight_like_edges(m, b, x1, y1);
+        break;
+    case BISHOP:
+        add_diag_edges(m, b, x1, y1, -1);
+        break;
+    case ROOK:
+        add_straight_edges(m, b, x1, y1, -1);
+        break;
+    case QUEEN:
+        add_straight_edges(m, b, x1, y1, -1);
+        add_diag_edges(m, b, x1, y1, -1);
+        break;
+    case KING:
+        add_straight_edges(m, b, x1, y1, 1);
+        add_diag_edges(m, b, x1, y1, 1);
+        break;
     }
 
     int i = transform_to_adj(x1, y1);
@@ -189,19 +186,17 @@ int is_valid_piece_move(board b, int x1, int y1, int x2, int y2, int game_meta) 
     return has_path(m, i, j);
 }
 
-
-void find_players_king(board b, Player p, int * x_out, int * y_out) {
+void find_players_king(board b, Player p, int *x_out, int *y_out) {
     for (int x = 0; x < N_RANKS; x++) {
         for (int y = 0; y < N_FILES; y++) {
-            if (b[y][x] == (p | KING)){
+            if (b[y][x] == (p | KING)) {
                 *x_out = x;
                 *y_out = y;
                 return;
             }
         }
-    }    
+    }
 }
-
 
 bool is_in_check(board b, Player p) {
     if (p == NOOWNER)
@@ -221,7 +216,6 @@ bool is_in_check(board b, Player p) {
     return false;
 }
 
-
 int is_valid_move(board b, int x1, int y1, int x2, int y2, int game_meta) {
     if (b[y1][x1] == EMPTY_SQUARE)
         return INVALID_MOVE;
@@ -232,5 +226,3 @@ int is_valid_move(board b, int x1, int y1, int x2, int y2, int game_meta) {
     return is_valid_piece_move(b, x1, y1, x2, y2, game_meta);
 }
 #endif
-
-

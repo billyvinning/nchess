@@ -1,10 +1,9 @@
 #ifndef PIECES_H
 #define PIECES_H
 
-#include <stdbool.h>
-#include <math.h>
 #include "players.h"
-
+#include <math.h>
+#include <stdbool.h>
 
 typedef enum {
     EMPTY_SQUARE = 0,
@@ -16,21 +15,17 @@ typedef enum {
     KING = 128
 } PieceType;
 
-
 int get_piece_owner(int piece) {
     if (piece == EMPTY_SQUARE) {
         return NOOWNER;
-    }
-    else {
+    } else {
         if ((piece & WHITE) == WHITE) {
             return WHITE;
-        }
-        else {
+        } else {
             return BLACK;
         }
     }
 }
-
 
 int get_piece_type(int piece) {
     if (piece == EMPTY_SQUARE) {
@@ -39,7 +34,6 @@ int get_piece_type(int piece) {
     return piece ^ get_piece_owner(piece);
 }
 
-
 int get_piece(PieceType type, Player player) {
     if (type == EMPTY_SQUARE || player == NOOWNER) {
         return EMPTY_SQUARE;
@@ -47,27 +41,25 @@ int get_piece(PieceType type, Player player) {
     return player & type;
 }
 
-
 char get_piece_repr(PieceType type) {
     switch (type) {
-        case EMPTY_SQUARE:
-            return ' ';
-        case PAWN:
-            return 'p';
-        case KNIGHT:
-            return 'k';
-        case BISHOP:
-            return 'B';
-        case ROOK:
-            return 'R';
-        case QUEEN:
-            return 'Q';
-        case KING:
-            return 'K';
-        default:
-            return '!';
+    case EMPTY_SQUARE:
+        return ' ';
+    case PAWN:
+        return 'p';
+    case KNIGHT:
+        return 'k';
+    case BISHOP:
+        return 'B';
+    case ROOK:
+        return 'R';
+    case QUEEN:
+        return 'Q';
+    case KING:
+        return 'K';
+    default:
+        return '!';
     }
 }
-
 
 #endif
