@@ -25,12 +25,12 @@ void transform_from_adj(int v, int * x, int * y) {
 
 
 void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int dx, int dy, int max_steps) {
-    int x, y, curr_node, prev_node, curr_node_owner, n_steps;
+    int x, y, curr_node, curr_node_owner;
     int src_node_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
 
-    n_steps = 1;
-    prev_node = src_node;
+    int n_steps = 1;
+    int prev_node = src_node;
     while (1) {
         x = x0 + (dx * n_steps);
         y = y0 + (dy * n_steps);
@@ -39,13 +39,15 @@ void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int dx
         curr_node = transform_to_adj(x, y);
         curr_node_owner = get_piece_owner(b[y][x]);
             
-        if (curr_node_owner == NOOWNER || curr_node_owner != src_node_owner)
-            m[prev_node][curr_node] = REGULAR_MOVE;       
-        if (curr_node_owner != NOOWNER)
+        if (curr_node_owner != src_node_owner) {
+            m[prev_node][curr_node] = REGULAR_MOVE;
+        }
+        if (curr_node_owner != NOOWNER) {
             break;
-    
+        }
+
         prev_node = curr_node;
-        n_steps += 1;
+        n_steps++;
         if (max_steps != -1 && n_steps > max_steps)
             break;
     }
@@ -54,21 +56,24 @@ void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int dx
 void add_diag_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int max_steps) {
     const int dx[] = {1, -1, -1, 1};
     const int dy[] = {1, 1, -1, -1};
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
         add_directional_edges(m, b, x0, y0, dx[i], dy[i], max_steps);
     }
 }
+
 
 void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int max_steps) {
-    const int dx[] = {1, 0, -1, 0};
-    const int dy[] = {0, 1, 0, -1};
-    for (int i = 0; i < 4; i++) {
+    //const int dx[] = {1, 0, -1, 0};
+    //const int dy[] = {0, 1, 0, -1};
+    const int dx[] = {0, -1, 0, 1};
+    const int dy[] = {1, 0, -1, 0};
+    for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
         add_directional_edges(m, b, x0, y0, dx[i], dy[i], max_steps);
     }
 }
 
 
-void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int * game_meta) {
+void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int game_meta) {
     int curr_node;
     int src_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
@@ -76,13 +81,13 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int * ga
     bool is_on_back_rank = false;
     bool can_enpassant;
     if (src_owner == WHITE) {
-        can_enpassant = *game_meta & WHITE_CAN_ENPASSANT;
+        can_enpassant = game_meta & WHITE_CAN_ENPASSANT;
         if (y0 == WHITE_PAWN_ORIGIN)
             is_on_back_rank = true;
         direction = -1;
     }
     else if (src_owner == BLACK) {
-        can_enpassant = *game_meta & BLACK_CAN_ENPASSANT;
+        can_enpassant = game_meta & BLACK_CAN_ENPASSANT;
         if (y0 == BLACK_PAWN_ORIGIN)
             is_on_back_rank = true;
         direction = 1;
@@ -103,7 +108,7 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0, int * ga
     }
 
     int x;
-    int enpassant_file = get_enpassant_file(*game_meta);
+    int enpassant_file = get_enpassant_file(game_meta);
     const int dx[] = {1, -1};
     for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
         x = x0 + dx[i];
@@ -126,7 +131,7 @@ void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
     const int dy[] = {2, 2, 1, 1, -1, -1, -2, -2};
     int src_node_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
         x = x0 + dx[i];
         y = y0 + dy[i];
         if (x < 0 || x >= N_FILES || y < 0 || y >= N_RANKS)
@@ -143,14 +148,18 @@ int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
     if (m[source][dest])
         return m[source][dest];
     for (int i = 0; i < ADJ_M_WIDTH; i++) {
-        if (m[source][i])
-            return has_path(m, i, dest);
+        if (m[source][i]) {
+            int rtn = has_path(m, i, dest);
+            if (rtn)
+                return rtn;
+        
+        }
     }
     return INVALID_MOVE;
 }
 
 
-int is_valid_piece_move(board b, int x1, int y1, int x2, int y2, int * game_meta) { 
+int is_valid_piece_move(board b, int x1, int y1, int x2, int y2, int game_meta) { 
     int m[ADJ_M_WIDTH][ADJ_M_WIDTH] = {{INVALID_MOVE}};
     switch (get_piece_type(b[y1][x1])) {
         case PAWN:
@@ -172,7 +181,9 @@ int is_valid_piece_move(board b, int x1, int y1, int x2, int y2, int * game_meta
         case KING:
             add_straight_edges(m, b, x1, y1, 1);
             add_diag_edges(m, b, x1, y1, 1);
+            break;
     }
+
     int i = transform_to_adj(x1, y1);
     int j = transform_to_adj(x2, y2);
     return has_path(m, i, j);
@@ -202,7 +213,7 @@ bool is_in_check(board b, Player p) {
         for (int y1 = 0; y1 < N_FILES; y1++) {
             if (get_piece_owner(b[y1][x1]) != p)
                 continue;
-            else if (is_valid_piece_move(b, x1, y1, x2, y2, &game_meta)) {
+            else if (is_valid_piece_move(b, x1, y1, x2, y2, game_meta)) {
                 return true;
             }
         }
@@ -211,7 +222,7 @@ bool is_in_check(board b, Player p) {
 }
 
 
-int is_valid_move(board b, int x1, int y1, int x2, int y2, int * game_meta) {
+int is_valid_move(board b, int x1, int y1, int x2, int y2, int game_meta) {
     if (b[y1][x1] == EMPTY_SQUARE)
         return INVALID_MOVE;
     else if (x1 == x2 && y1 == y2)

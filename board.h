@@ -111,7 +111,7 @@ void make_castling_move(board b, int x1, int y1, int x2, int y2, int * game_meta
 
 bool make_move(board b, int x1, int y1, int x2, int y2, int * game_meta) {
     int piece = b[y1][x1];
-    switch(is_valid_move(b, x1, y1, x2, y2, game_meta)) {
+    switch(is_valid_move(b, x1, y1, x2, y2, *game_meta)) {
         case INVALID_MOVE:
             return false;
         case REGULAR_MOVE:

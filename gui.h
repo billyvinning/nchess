@@ -10,7 +10,13 @@
 #define WIN_HEIGHT N_RANKS + 2 * WIN_PADDING
 #define WIN_WIDTH SQUARE_WIDTH * N_FILES + 2 * WIN_PADDING
 
+#define BLACK_PIECE_COLOUR COLOR_RED
+#define WHITE_PIECE_COLOUR COLOR_BLUE
+#define BLACK_SQUARE_COLOUR COLOR_BLACK
+#define WHITE_SQUARE_COLOUR COLOR_WHITE
+#define HIGHLIGHTED_SQUARE_COLOUR COLOR_CYAN
 
+typedef enum {WHITE_SQUARE=0x4, BLACK_SQUARE=0x8, HIGHLIGHTED_SQUARE=0x10} SquareBackgroundType;
 
 void print_game_meta_debug(WINDOW * win, int flags) {
     const char * flag_names[] = {
@@ -68,7 +74,7 @@ void transform_to_board(int * x, int * y) {
 void update_cursor(WINDOW * win, int x, int y) {
     wmove(win, y, x);
     wattron(win, A_UNDERLINE);
-    //wrefresh(win);
+    wrefresh(win);
     wattroff(win, A_UNDERLINE);
 }
 
@@ -90,59 +96,74 @@ bool init_colours(void) {
         return false;
     }
     start_color();
-    static const int BLACK_PIECE_COLOUR = COLOR_RED;
-    static const int WHITE_PIECE_COLOUR = COLOR_BLUE;
-    static const int BLACK_SQUARE_COLOUR = COLOR_BLACK;
-    static const int WHITE_SQUARE_COLOUR = COLOR_WHITE;
-    init_pair(1, WHITE_PIECE_COLOUR, WHITE_SQUARE_COLOUR);
-    init_pair(2, BLACK_PIECE_COLOUR, WHITE_SQUARE_COLOUR);
-    init_pair(3, WHITE_PIECE_COLOUR, BLACK_SQUARE_COLOUR);
-    init_pair(4, BLACK_PIECE_COLOUR, BLACK_SQUARE_COLOUR);
+    
+    const int square_background_types[] = {WHITE_SQUARE, BLACK_SQUARE, HIGHLIGHTED_SQUARE};
+    const int square_background_colours[] = {WHITE_SQUARE_COLOUR, BLACK_SQUARE_COLOUR, HIGHLIGHTED_SQUARE_COLOUR};
+
+    for (int i = 0; i < sizeof(square_background_types) / sizeof(int); i++) {
+        init_pair(
+            WHITE | square_background_types[i],
+            WHITE_PIECE_COLOUR,
+            square_background_colours[i]
+        );
+        init_pair(
+            BLACK | square_background_types[i],
+            BLACK_PIECE_COLOUR,
+            square_background_colours[i]
+        );
+    }
     return true;
 }
 
 
-int get_colour_pair(bool is_white_square, bool is_white_piece) {
-    if (is_white_square && is_white_piece) {
-        return 1;
-    } else if (is_white_square && !is_white_piece) {
-        return 2;
-    } else if (!is_white_square && is_white_piece) {
-        return 3;
+void print_square(WINDOW * win, board b, int x, int y, bool is_highlighted) {
+    int piece_owner = get_piece_owner(b[y][x]);
+    int background_type;
+    if (is_highlighted) {
+        background_type = HIGHLIGHTED_SQUARE; 
+    } else if (is_white_square(x, y)) {
+        background_type = WHITE_SQUARE;
     }
     else {
-        return 4;
-    }
-}
+        background_type = BLACK_SQUARE;
+    }  
+    if (piece_owner == NOOWNER)
+        piece_owner = WHITE;
 
-void print_square(WINDOW * win, board b, int i, int j) {
-    int colour_pair = get_colour_pair(
-        is_white_square(i, j), get_piece_owner(b[i][j]) == WHITE
-    );
-    wattron(win, COLOR_PAIR(colour_pair));
-
-    int x = j;
-    int y = i;
-    transform_to_win(&x, &y);
+    int colour_pair = COLOR_PAIR(piece_owner | background_type);
+    int x_t = x;
+    int y_t = y;
+    transform_to_win(&x_t, &y_t);
     char piece_repr;
-    if (b[i][j] == 0) {
+    if (b[y][x] == 0) {
         piece_repr = ' ';
     } else {
-        int piece = get_piece_type(b[i][j]);
+        int piece = get_piece_type(b[y][x]);
         piece_repr = get_piece_repr(piece);
     }
 
-    mvwprintw(win, y, x, " %c ", piece_repr);
-    wattroff(win, COLOR_PAIR(colour_pair));    
+    wattron(win, colour_pair);
+    mvwprintw(win, y_t, x_t, " %c ", piece_repr);
+    wattroff(win, colour_pair);    
     refresh();
     return;
 }
 
 
-void print_board(WINDOW * win, board b) {
-    for (int i = 0; i < N_FILES; i++) {
-        for (int j = 0; j < N_RANKS; j++) {
-            print_square(win, b, i, j);
+void print_board(WINDOW * win, board b, int x_selected, int y_selected, int game_meta) {
+    
+    bool is_highlighted;
+    if (x_selected != -1 && y_selected != -1) {
+        transform_to_board(&x_selected, &y_selected); 
+    }
+    for (int y = 0; y < N_FILES; y++) {
+        for (int x = 0; x < N_RANKS; x++) {
+            if (x_selected == -1) {
+                is_highlighted = false;
+            } else {
+                is_highlighted = is_valid_move(b, x_selected, y_selected, x, y, game_meta);
+            }
+            print_square(win, b, x, y, is_highlighted);
         }
     }
     wrefresh(win);
@@ -160,8 +181,8 @@ int init_gui(board b, int * game_meta) {
     int selected_x = -1;
     int selected_y = -1;
     WINDOW * win = new_win();
-    print_board(win, b);
-    print_game_meta_debug(win, *game_meta);
+    print_board(win, b, selected_x, selected_y, *game_meta);
+    // print_game_meta_debug(win, *game_meta);
     update_cursor(win, x, y);
     while (1) {
         int ch = wgetch(win);
@@ -215,8 +236,8 @@ int init_gui(board b, int * game_meta) {
                 break;
         }
         win = new_win();
-        print_board(win, b);
-        print_game_meta_debug(win, *game_meta);
+        print_board(win, b, selected_x, selected_y, *game_meta);
+        //print_game_meta_debug(win, *game_meta);
         update_cursor(win, x, y);
     }
 }
