@@ -16,7 +16,7 @@ The only dependency is `ncurses`. To build the package with GCC 12.2.1, execute 
 Contributing
 ------------
 
-The dependencies are `clang-format` and `include-what-you-use`; to install the pre-commit hooks, execute the following:
+The dependencies are `clang-format`, `clang-tidy` and `include-what-you-use`; to install the pre-commit hooks, execute the following:
 
 .. code-block:: console
 
