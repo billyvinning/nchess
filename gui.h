@@ -27,18 +27,20 @@ typedef enum {
 void print_game_meta_debug(WINDOW *win, int flags) {
     const char *flag_names[] = {
         "WHITES_TURN",         "BLACKS_TURN",         "WHITE_IN_CHECK",
-        "BLACK_IN_CHECK",      "WHITE_CAN_ENPASSANT", "BLACK_CAN_ENPASSANT",
-        "CAN_ENPASSANT_APAWN", "CAN_ENPASSANT_BPAWN", "CAN_ENPASSANT_CPAWN",
-        "CAN_ENPASSANT_DPAWN", "CAN_ENPASSANT_EPAWN", "CAN_ENPASSANT_FPAWN",
-        "CAN_ENPASSANT_GPAWN", "CAN_ENPASSANT_HPAWN",
+        "BLACK_IN_CHECK",      "WHITE_CAN_CASTLE",    "BLACK_CAN_CASTLE",
+        "WHITE_CAN_ENPASSANT", "BLACK_CAN_ENPASSANT", "CAN_ENPASSANT_APAWN",
+        "CAN_ENPASSANT_BPAWN", "CAN_ENPASSANT_CPAWN", "CAN_ENPASSANT_DPAWN",
+        "CAN_ENPASSANT_EPAWN", "CAN_ENPASSANT_FPAWN", "CAN_ENPASSANT_GPAWN",
+        "CAN_ENPASSANT_HPAWN",
     };
 
     const int flag_values[] = {
         WHITES_TURN,         BLACKS_TURN,         WHITE_IN_CHECK,
-        BLACK_IN_CHECK,      WHITE_CAN_ENPASSANT, BLACK_CAN_ENPASSANT,
-        CAN_ENPASSANT_APAWN, CAN_ENPASSANT_BPAWN, CAN_ENPASSANT_CPAWN,
-        CAN_ENPASSANT_DPAWN, CAN_ENPASSANT_EPAWN, CAN_ENPASSANT_FPAWN,
-        CAN_ENPASSANT_GPAWN, CAN_ENPASSANT_HPAWN,
+        BLACK_IN_CHECK,      WHITE_CAN_CASTLE,    BLACK_CAN_CASTLE,
+        WHITE_CAN_ENPASSANT, BLACK_CAN_ENPASSANT, CAN_ENPASSANT_APAWN,
+        CAN_ENPASSANT_BPAWN, CAN_ENPASSANT_CPAWN, CAN_ENPASSANT_DPAWN,
+        CAN_ENPASSANT_EPAWN, CAN_ENPASSANT_FPAWN, CAN_ENPASSANT_GPAWN,
+        CAN_ENPASSANT_HPAWN,
     };
     for (int i = 0; i < (sizeof(flag_values) / sizeof(int)); i++) {
         mvprintw(i, 0, "                    ");
@@ -172,7 +174,7 @@ int init_gui(board b, int *game_meta) {
     int selected_y = -1;
     WINDOW *win = new_win();
     print_board(win, b, selected_x, selected_y, *game_meta);
-    // print_game_meta_debug(win, *game_meta);
+    print_game_meta_debug(win, *game_meta);
     update_cursor(win, x, y);
     while (1) {
         int ch = wgetch(win);
@@ -227,7 +229,7 @@ int init_gui(board b, int *game_meta) {
         }
         win = new_win();
         print_board(win, b, selected_x, selected_y, *game_meta);
-        // print_game_meta_debug(win, *game_meta);
+        print_game_meta_debug(win, *game_meta);
         update_cursor(win, x, y);
     }
 }

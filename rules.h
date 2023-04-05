@@ -142,6 +142,26 @@ void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
     }
 }
 
+void add_castling_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
+                        int game_meta) {
+    int piece_owner = get_piece_owner(b[y0][x0]);
+    bool can_castle =
+        ((piece_owner == WHITE && (game_meta & WHITE_CAN_CASTLE)) ||
+         (piece_owner == BLACK && (game_meta & BLACK_CAN_CASTLE)));
+    if (!can_castle)
+        return;
+    int src_node = transform_to_adj(x0, y0);
+    if (b[y0][x0 + 1] == EMPTY_SQUARE && b[y0][x0 + 2] == EMPTY_SQUARE) {
+        int dest_node = transform_to_adj(x0 + 2, y0);
+        m[src_node][dest_node] = CASTLING;
+    }
+    if (b[y0][x0 - 1] == EMPTY_SQUARE && b[y0][x0 - 2] == EMPTY_SQUARE &&
+        b[y0][x0 - 3] == EMPTY_SQUARE) {
+        int dest_node = transform_to_adj(x0 - 2, y0);
+        m[src_node][dest_node] = CASTLING;
+    }
+}
+
 int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
     if (m[source][dest])
         return m[source][dest];
@@ -178,6 +198,7 @@ int is_valid_piece_move(board b, int x1, int y1, int x2, int y2,
     case KING:
         add_straight_edges(m, b, x1, y1, 1);
         add_diag_edges(m, b, x1, y1, 1);
+        add_castling_edges(m, b, x1, y1, game_meta);
         break;
     }
 
