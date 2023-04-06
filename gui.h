@@ -61,11 +61,6 @@ void transform_to_board(int *x, int *y) {
     return;
 }
 
-void update_cursor(WINDOW *win, int x, int y) {
-    wmove(win, y, x);
-    wrefresh(win);
-}
-
 WINDOW *new_win() {
     WINDOW *win;
     int starty = (LINES - WIN_HEIGHT) / 2;
@@ -155,13 +150,11 @@ void print_square(WINDOW *win, board b, int x1, int y1, int x2, int y2,
     transform_to_win(&x2, &y2);
     mvwprintw(win, y2, x2, " %c ", piece_repr);
     wattroff(win, attr);
-    refresh();
     return;
 }
 
 void print_board(WINDOW *win, board b, int x1, int y1, int x_cursor,
                  int y_cursor, int game_meta) {
-
     if (x1 != -1 && y1 != -1) {
         transform_to_board(&x1, &y1);
     }
@@ -171,7 +164,6 @@ void print_board(WINDOW *win, board b, int x1, int y1, int x_cursor,
             print_square(win, b, x1, y1, x2, y2, x_cursor, y_cursor, game_meta);
         }
     }
-    wrefresh(win);
 }
 
 void update_gui(WINDOW *win, board b, int x1, int y1, int x2, int y2,
@@ -179,7 +171,8 @@ void update_gui(WINDOW *win, board b, int x1, int y1, int x2, int y2,
     if (debug)
         print_game_meta_debug(win, game_meta);
     print_board(win, b, x1, y1, x2, y2, game_meta);
-    update_cursor(win, x2, y2);
+    wmove(win, y2, x2);
+    wrefresh(win);
 }
 
 bool init_gui() {
@@ -188,7 +181,8 @@ bool init_gui() {
         return false;
     cbreak(); /* Start curses mode              */
     noecho();
-    mousemask(BUTTON1_PRESSED, NULL);
+    mousemask(BUTTON1_PRESSED | BUTTON3_PRESSED, NULL);
+    mouseinterval(0);
     curs_set(0);
     return true;
 }
@@ -246,15 +240,20 @@ int run_gui(board b, int *game_meta) {
                 x2 += SQUARE_WIDTH;
             break;
         case KEY_MOUSE:
-            if (getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
-                wmouse_trafo(win, &event.y, &event.x, false);
-                if (x1 == -1 && y1 == -1) {
-                    x1 = event.x;
-                    y1 = event.y;
-                } else {
-                    x2 = event.x;
-                    y2 = event.y;
-                    attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
+            if (getmouse(&event) == OK) {
+                if (event.bstate & BUTTON1_PRESSED) {
+                    wmouse_trafo(win, &event.y, &event.x, false);
+                    if (x1 == -1 && y1 == -1) {
+                        x1 = event.x;
+                        y1 = event.y;
+                    } else {
+                        x2 = event.x;
+                        y2 = event.y;
+                        attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
+                    }
+                } else if (event.bstate & BUTTON3_PRESSED) {
+                    x1 = -1;
+                    y1 = -1;
                 }
             }
             break;

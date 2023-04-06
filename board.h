@@ -104,6 +104,7 @@ void make_castling_move(board b, int x1, int y1, int x2, int y2,
         b[y2][x2 + 1] = b[y2][0];
         b[y2][0] = EMPTY_SQUARE;
     }
+    b[y1][x1] = EMPTY_SQUARE;
 }
 
 bool make_move(board b, int x1, int y1, int x2, int y2, int *game_meta) {
