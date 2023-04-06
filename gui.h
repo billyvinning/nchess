@@ -63,9 +63,7 @@ void transform_to_board(int *x, int *y) {
 
 void update_cursor(WINDOW *win, int x, int y) {
     wmove(win, y, x);
-    wattron(win, A_UNDERLINE);
     wrefresh(win);
-    wattroff(win, A_UNDERLINE);
 }
 
 WINDOW *new_win() {
@@ -128,12 +126,23 @@ int get_colour_pair(board b, int x1, int y1, int x2, int y2, int game_meta) {
     return COLOR_PAIR(square_owner | background_type);
 }
 
+int get_square_attr(board b, int x1, int y1, int x2, int y2, int x_cur,
+                    int y_cur, int game_meta) {
+    int attr = get_colour_pair(b, x1, y1, x2, y2, game_meta);
+
+    if (x2 == x_cur && y2 == y_cur) { // Is cursor square
+        attr |= A_REVERSE;
+    } else if (x1 != -1 && y1 != -1 && (x1 == x2 && y1 == y2)) {
+        attr |= A_REVERSE | A_BOLD;
+    }
+    return attr;
+}
+
 void print_square(WINDOW *win, board b, int x1, int y1, int x2, int y2,
-                  int game_meta) {
-    int colour_pair = get_colour_pair(b, x1, y1, x2, y2, game_meta);
-    int x_t = x2;
-    int y_t = y2;
-    transform_to_win(&x_t, &y_t);
+                  int x_cur, int y_cur, int game_meta) {
+
+    int attr = get_square_attr(b, x1, y1, x2, y2, x_cur, y_cur, game_meta);
+
     char piece_repr;
     if (b[y2][x2] == 0) {
         piece_repr = ' ';
@@ -142,95 +151,125 @@ void print_square(WINDOW *win, board b, int x1, int y1, int x2, int y2,
         piece_repr = get_piece_repr(piece);
     }
 
-    wattron(win, colour_pair);
-    mvwprintw(win, y_t, x_t, " %c ", piece_repr);
-    wattroff(win, colour_pair);
+    wattron(win, attr);
+    transform_to_win(&x2, &y2);
+    mvwprintw(win, y2, x2, " %c ", piece_repr);
+    wattroff(win, attr);
     refresh();
     return;
 }
 
-void print_board(WINDOW *win, board b, int x1, int y1, int game_meta) {
+void print_board(WINDOW *win, board b, int x1, int y1, int x_cursor,
+                 int y_cursor, int game_meta) {
 
     if (x1 != -1 && y1 != -1) {
         transform_to_board(&x1, &y1);
     }
+    transform_to_board(&x_cursor, &y_cursor);
     for (int y2 = 0; y2 < N_FILES; y2++) {
         for (int x2 = 0; x2 < N_RANKS; x2++) {
-            print_square(win, b, x1, y1, x2, y2, game_meta);
+            print_square(win, b, x1, y1, x2, y2, x_cursor, y_cursor, game_meta);
         }
     }
     wrefresh(win);
 }
 
-int init_gui(board b, int *game_meta) {
+void update_gui(WINDOW *win, board b, int x1, int y1, int x2, int y2,
+                int game_meta, bool debug) {
+    if (debug)
+        print_game_meta_debug(win, game_meta);
+    print_board(win, b, x1, y1, x2, y2, game_meta);
+    update_cursor(win, x2, y2);
+}
+
+bool init_gui() {
     initscr();
     if (!init_colours())
-        return EXIT_FAILURE;
+        return false;
     cbreak(); /* Start curses mode              */
     noecho();
-    int x = WIN_PADDING;
-    int y = WIN_HEIGHT - 1 - WIN_PADDING;
-    int selected_x = -1;
-    int selected_y = -1;
+    mousemask(BUTTON1_PRESSED, NULL);
+    curs_set(0);
+    return true;
+}
+
+void attempt_move(WINDOW *win, board b, int *x1, int *y1, int x2, int y2,
+                  int *game_meta) {
+    int x1_t = *x1;
+    int y1_t = *y1;
+    transform_to_board(&x1_t, &y1_t);
+    transform_to_board(&x2, &y2);
+    if (!make_move(b, x1_t, y1_t, x2, y2, game_meta)) {
+        wmove(win, *x1, *y1);
+    }
+    *x1 = -1;
+    *y1 = -1;
+}
+
+int run_gui(board b, int *game_meta) {
+    bool debug = false;
+    if (!init_gui())
+        return EXIT_FAILURE;
+
     WINDOW *win = new_win();
-    print_board(win, b, selected_x, selected_y, *game_meta);
-    print_game_meta_debug(win, *game_meta);
-    update_cursor(win, x, y);
+    MEVENT event;
+
+    int x1 = -1;
+    int y1 = -1;
+    int x2 = WIN_PADDING;
+    int y2 = WIN_HEIGHT - 1 - WIN_PADDING;
+    update_gui(win, b, x1, y1, x2, y2, *game_meta, debug);
     while (1) {
-        int ch = wgetch(win);
-        switch (ch) {
+        switch (wgetch(win)) {
         case KEY_UP:
-            if (y == WIN_PADDING)
-                y = WIN_HEIGHT - WIN_PADDING - 1;
+            if (y2 == WIN_PADDING)
+                y2 = WIN_HEIGHT - WIN_PADDING - 1;
             else
-                y--;
+                y2--;
             break;
         case KEY_DOWN:
-            if (y == WIN_HEIGHT - WIN_PADDING - 1)
-                y = WIN_PADDING;
+            if (y2 == WIN_HEIGHT - WIN_PADDING - 1)
+                y2 = WIN_PADDING;
             else
-                y++;
+                y2++;
             break;
         case KEY_LEFT:
-            if (x == 1)
-                x = WIN_WIDTH - WIN_PADDING - SQUARE_WIDTH;
+            if (x2 == 1)
+                x2 = WIN_WIDTH - WIN_PADDING - SQUARE_WIDTH;
             else
-                x -= SQUARE_WIDTH;
+                x2 -= SQUARE_WIDTH;
             break;
         case KEY_RIGHT:
-            if (x >= WIN_WIDTH - WIN_PADDING - SQUARE_WIDTH)
-                x = WIN_PADDING;
+            if (x2 >= WIN_WIDTH - WIN_PADDING - SQUARE_WIDTH)
+                x2 = WIN_PADDING;
             else
-                x += SQUARE_WIDTH;
+                x2 += SQUARE_WIDTH;
+            break;
+        case KEY_MOUSE:
+            if (getmouse(&event) == OK && (event.bstate & BUTTON1_PRESSED)) {
+                wmouse_trafo(win, &event.y, &event.x, false);
+                if (x1 == -1 && y1 == -1) {
+                    x1 = event.x;
+                    y1 = event.y;
+                } else {
+                    x2 = event.x;
+                    y2 = event.y;
+                    attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
+                }
+            }
             break;
         case ' ':
-            if (selected_x == -1) {
-                selected_x = x;
-                selected_y = y;
+            if (x1 == -1 && y1 == -1) {
+                x1 = x2;
+                y1 = y2;
             } else {
-                int board_x1 = selected_x;
-                int board_y1 = selected_y;
-                int board_x2 = x;
-                int board_y2 = y;
-                transform_to_board(&board_x1, &board_y1);
-                transform_to_board(&board_x2, &board_y2);
-                if (!make_move(b, board_x1, board_y1, board_x2, board_y2,
-                               game_meta)) {
-                    wmove(win, selected_y, selected_x);
-                } else {
-                }
-                selected_x = -1;
-                selected_y = -1;
+                attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
             }
             break;
         default:
-            // refresh();
             break;
         }
-        win = new_win();
-        print_board(win, b, selected_x, selected_y, *game_meta);
-        print_game_meta_debug(win, *game_meta);
-        update_cursor(win, x, y);
+        update_gui(win, b, x1, y1, x2, y2, *game_meta, debug);
     }
 }
 #endif
