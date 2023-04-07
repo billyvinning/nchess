@@ -8,7 +8,7 @@
 int main(void) {
     board b = {};
     init_board(b);
-    int game_meta = init_game();
+    int game_meta = init_game_meta();
     run_gui(b, &game_meta);
     return EXIT_SUCCESS;
 }

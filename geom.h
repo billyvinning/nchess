@@ -10,4 +10,12 @@
 
 typedef short int board[N_FILES][N_RANKS];
 
+void copy_board(board src, board dest) {
+    for (int y = 0; y < N_FILES; y++) {
+        for (int x = 0; x < N_RANKS; x++) {
+            dest[y][x] = src[y][x];
+        }
+    }
+}
+
 #endif

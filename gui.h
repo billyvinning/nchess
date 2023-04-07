@@ -5,6 +5,7 @@
 #include "pieces.h"
 #include <math.h>
 #include <ncurses.h>
+#include <unistd.h>
 
 #define WIN_PADDING 1
 #define SQUARE_WIDTH 3
@@ -68,6 +69,10 @@ WINDOW *new_win() {
     win = newwin(WIN_HEIGHT, WIN_WIDTH, starty, startx);
     keypad(win, TRUE);
     box(win, 0, 0);
+    refresh();
+    int x, y;
+    getbegyx(win, y, x);
+    refresh();
     return win;
 }
 
@@ -166,11 +171,22 @@ void print_board(WINDOW *win, board b, int x1, int y1, int x_cursor,
     }
 }
 
+void print_board_labels(WINDOW *win) {
+    int x, y;
+    getmaxyx(win, y, x);
+    char labels[] = "abcdefgh";
+    for (int i = 0; i < (sizeof(labels) / sizeof(char) - 1); i++) {
+        mvwprintw(win, y - 1, 2 + (i * SQUARE_WIDTH), "%c", labels[i]);
+        mvwprintw(win, i + 1, x - 1, "%d", (8 - i));
+    }
+}
+
 void update_gui(WINDOW *win, board b, int x1, int y1, int x2, int y2,
                 int game_meta, bool debug) {
     if (debug)
         print_game_meta_debug(win, game_meta);
     print_board(win, b, x1, y1, x2, y2, game_meta);
+    // print_board_labels(win);
     wmove(win, y2, x2);
     wrefresh(win);
 }
@@ -181,7 +197,8 @@ bool init_gui() {
         return false;
     cbreak(); /* Start curses mode              */
     noecho();
-    mousemask(BUTTON1_PRESSED | BUTTON3_PRESSED, NULL);
+    // mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED, NULL);
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
     mouseinterval(0);
     curs_set(0);
     return true;
@@ -207,15 +224,18 @@ int run_gui(board b, int *game_meta) {
 
     WINDOW *win = new_win();
     MEVENT event;
+    MEVENT event_tmp;
 
     int x1 = -1;
     int y1 = -1;
     int x2 = WIN_PADDING;
     int y2 = WIN_HEIGHT - 1 - WIN_PADDING;
+    int x_click, y_click;
     update_gui(win, b, x1, y1, x2, y2, *game_meta, debug);
     while (1) {
         switch (wgetch(win)) {
         case KEY_UP:
+
             if (y2 == WIN_PADDING)
                 y2 = WIN_HEIGHT - WIN_PADDING - 1;
             else
@@ -242,7 +262,9 @@ int run_gui(board b, int *game_meta) {
         case KEY_MOUSE:
             if (getmouse(&event) == OK) {
                 if (event.bstate & BUTTON1_PRESSED) {
-                    wmouse_trafo(win, &event.y, &event.x, false);
+                    if (!wmouse_trafo(win, &event.y, &event.x, false))
+                        break;
+
                     if (x1 == -1 && y1 == -1) {
                         x1 = event.x;
                         y1 = event.y;
@@ -251,6 +273,7 @@ int run_gui(board b, int *game_meta) {
                         y2 = event.y;
                         attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
                     }
+
                 } else if (event.bstate & BUTTON3_PRESSED) {
                     x1 = -1;
                     y1 = -1;

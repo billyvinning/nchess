@@ -39,7 +39,7 @@ int get_enpassant_file(GameMeta flag) {
     return -1;
 }
 
-int init_game(void) {
+int init_game_meta(void) {
     return WHITES_TURN | WHITE_CAN_CASTLE | BLACK_CAN_CASTLE;
 }
 

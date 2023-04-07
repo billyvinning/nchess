@@ -109,6 +109,7 @@ void make_castling_move(board b, int x1, int y1, int x2, int y2,
 
 bool make_move(board b, int x1, int y1, int x2, int y2, int *game_meta) {
     int piece = b[y1][x1];
+    int player = get_piece_owner(piece);
     switch (is_valid_move(b, x1, y1, x2, y2, *game_meta)) {
     case INVALID_MOVE:
         return false;
@@ -124,7 +125,34 @@ bool make_move(board b, int x1, int y1, int x2, int y2, int *game_meta) {
     default:
         return false;
     }
+
+    if (piece & KING) {
+        int flag;
+        if (player == WHITE) {
+            flag = WHITE_CAN_CASTLE;
+        } else {
+            flag = BLACK_CAN_CASTLE;
+        }
+        if (*game_meta & flag) {
+            *game_meta ^= flag;
+        }
+    }
     return true;
 }
 
+//
+// typedef struct {
+//    int turn_number;
+//    board * b;
+//    int meta;
+//} Game;
+//
+// Game make_game(void) {
+//    Game g;
+//    g.turn_number = 1;
+//    g.b = {};
+//    g.meta = init_game_meta();
+//    return g;
+//}
+//
 #endif

@@ -65,10 +65,8 @@ void add_diag_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
 
 void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
                         int max_steps) {
-    // const int dx[] = {1, 0, -1, 0};
-    // const int dy[] = {0, 1, 0, -1};
-    const int dx[] = {0, -1, 0, 1};
-    const int dy[] = {1, 0, -1, 0};
+    const int dx[] = {1, 0, -1, 0};
+    const int dy[] = {0, 1, 0, -1};
     for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
         add_directional_edges(m, b, x0, y0, dx[i], dy[i], max_steps);
     }
@@ -207,7 +205,7 @@ int is_valid_piece_move(board b, int x1, int y1, int x2, int y2,
     return has_path(m, i, j);
 }
 
-void find_players_king(board b, Player p, int *x_out, int *y_out) {
+void find_players_king(board b, int p, int *x_out, int *y_out) {
     for (int x = 0; x < N_RANKS; x++) {
         for (int y = 0; y < N_FILES; y++) {
             if (b[y][x] == (p | KING)) {
@@ -219,15 +217,15 @@ void find_players_king(board b, Player p, int *x_out, int *y_out) {
     }
 }
 
-bool is_in_check(board b, Player p) {
+bool is_in_check(board b, int p) {
     if (p == NOOWNER)
         return false;
     int x2, y2;
     find_players_king(b, p, &x2, &y2);
     int game_meta = NULL_META;
-    for (int x1 = 0; x1 < N_RANKS; x2++) {
+    for (int x1 = 0; x1 < N_RANKS; x1++) {
         for (int y1 = 0; y1 < N_FILES; y1++) {
-            if (get_piece_owner(b[y1][x1]) != p)
+            if (get_piece_owner(b[y1][x1]) == p)
                 continue;
             else if (is_valid_piece_move(b, x1, y1, x2, y2, game_meta)) {
                 return true;
@@ -244,6 +242,18 @@ int is_valid_move(board b, int x1, int y1, int x2, int y2, int game_meta) {
         return INVALID_MOVE;
     else if (get_piece_type(b[y2][x2]) == KING)
         return INVALID_MOVE;
-    return is_valid_piece_move(b, x1, y1, x2, y2, game_meta);
+    int rtn = is_valid_piece_move(b, x1, y1, x2, y2, game_meta);
+    if (rtn == INVALID_MOVE)
+        return rtn;
+
+    board b_copy;
+    copy_board(b, b_copy);
+    b_copy[y2][x2] = b_copy[y1][x1];
+    b_copy[y1][x1] = EMPTY_SQUARE;
+    if (is_in_check(b_copy, get_piece_owner(b[y1][x1]))) {
+        return INVALID_MOVE;
+    }
+
+    return rtn;
 }
 #endif
