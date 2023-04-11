@@ -6,9 +6,7 @@
 #include "gui.h"
 
 int main(void) {
-    board b = {};
-    init_board(b);
-    int game_meta = init_game_meta();
-    run_gui(b, &game_meta);
+    Game game = make_game();
+    run_gui(&game);
     return EXIT_SUCCESS;
 }

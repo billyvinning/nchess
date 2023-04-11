@@ -72,8 +72,8 @@ void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
     }
 }
 
-void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
-                         int game_meta) {
+void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
+                         int y0) {
     int curr_node;
     int src_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
@@ -140,8 +140,8 @@ void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
     }
 }
 
-void add_castling_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
-                        int game_meta) {
+void add_castling_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
+                        int y0) {
     int piece_owner = get_piece_owner(b[y0][x0]);
     bool can_castle =
         ((piece_owner == WHITE && (game_meta & WHITE_CAN_CASTLE)) ||
@@ -173,12 +173,12 @@ int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
     return INVALID_MOVE;
 }
 
-int is_valid_piece_move(board b, int x1, int y1, int x2, int y2,
-                        int game_meta) {
+int is_valid_piece_move(board b, int game_meta, int x1, int y1, int x2,
+                        int y2) {
     int m[ADJ_M_WIDTH][ADJ_M_WIDTH] = {{INVALID_MOVE}};
     switch (get_piece_type(b[y1][x1])) {
     case PAWN:
-        add_pawn_like_edges(m, b, x1, y1, game_meta);
+        add_pawn_like_edges(m, b, game_meta, x1, y1);
         break;
     case KNIGHT:
         add_knight_like_edges(m, b, x1, y1);
@@ -196,7 +196,7 @@ int is_valid_piece_move(board b, int x1, int y1, int x2, int y2,
     case KING:
         add_straight_edges(m, b, x1, y1, 1);
         add_diag_edges(m, b, x1, y1, 1);
-        add_castling_edges(m, b, x1, y1, game_meta);
+        add_castling_edges(m, b, game_meta, x1, y1);
         break;
     }
 
@@ -225,9 +225,10 @@ bool is_in_check(board b, int p) {
     int game_meta = NULL_META;
     for (int x1 = 0; x1 < N_RANKS; x1++) {
         for (int y1 = 0; y1 < N_FILES; y1++) {
-            if (get_piece_owner(b[y1][x1]) == p)
+            int p2 = get_piece_owner(b[y1][x1]);
+            if (p2 == p || p2 == NOOWNER)
                 continue;
-            else if (is_valid_piece_move(b, x1, y1, x2, y2, game_meta)) {
+            else if (is_valid_piece_move(b, game_meta, x1, y1, x2, y2)) {
                 return true;
             }
         }
@@ -235,18 +236,19 @@ bool is_in_check(board b, int p) {
     return false;
 }
 
-int is_valid_move(board b, int x1, int y1, int x2, int y2, int game_meta) {
+int is_valid_move(board b, int game_meta, int x1, int y1, int x2, int y2) {
     if (b[y1][x1] == EMPTY_SQUARE)
         return INVALID_MOVE;
     else if (x1 == x2 && y1 == y2)
         return INVALID_MOVE;
     else if (get_piece_type(b[y2][x2]) == KING)
         return INVALID_MOVE;
-    int rtn = is_valid_piece_move(b, x1, y1, x2, y2, game_meta);
-    if (rtn == INVALID_MOVE)
+    int rtn = is_valid_piece_move(b, game_meta, x1, y1, x2, y2);
+    if (rtn == INVALID_MOVE) {
         return rtn;
+    }
 
-    board b_copy;
+    board b_copy = {{INVALID_MOVE}};
     copy_board(b, b_copy);
     b_copy[y2][x2] = b_copy[y1][x1];
     b_copy[y1][x1] = EMPTY_SQUARE;

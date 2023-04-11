@@ -50,6 +50,8 @@ void print_game_meta_debug(WINDOW *win, int flags) {
     }
 }
 
+bool is_white_square(int i, int j) { return i % 2 ^ j % 2; }
+
 void transform_to_win(int *x, int *y) {
     *x = (SQUARE_WIDTH * (*x)) + WIN_PADDING;
     *y = (*y + WIN_PADDING);
@@ -100,13 +102,13 @@ bool init_colours(void) {
     return true;
 }
 
-int get_colour_pair(board b, int x1, int y1, int x2, int y2, int game_meta) {
+int get_colour_pair(Game g, int x1, int y1, int x2, int y2) {
     int background_type;
     bool is_highlighted =
-        x1 != -1 && y1 != -1 && is_valid_move(b, x1, y1, x2, y2, game_meta);
+        x1 != -1 && y1 != -1 && is_valid_move(g.b, g.meta, x1, y1, x2, y2);
 
     if (is_highlighted) {
-        if (get_piece_owner(b[y1][x1]) == WHITE) {
+        if (get_piece_owner(g.b[y1][x1]) == WHITE) {
             background_type = WHITE_HIGHLIGHTED_SQUARE;
         } else {
             background_type = BLACK_HIGHLIGHTED_SQUARE;
@@ -119,16 +121,16 @@ int get_colour_pair(board b, int x1, int y1, int x2, int y2, int game_meta) {
         }
     }
 
-    int square_owner = get_piece_owner(b[y2][x2]);
+    int square_owner = get_piece_owner(g.b[y2][x2]);
     if (square_owner == NOOWNER)
         square_owner = WHITE;
 
     return COLOR_PAIR(square_owner | background_type);
 }
 
-int get_square_attr(board b, int x1, int y1, int x2, int y2, int x_cur,
-                    int y_cur, int game_meta) {
-    int attr = get_colour_pair(b, x1, y1, x2, y2, game_meta);
+int get_square_attr(Game g, int x1, int y1, int x2, int y2, int x_cur,
+                    int y_cur) {
+    int attr = get_colour_pair(g, x1, y1, x2, y2);
 
     if (x2 == x_cur && y2 == y_cur) { // Is cursor square
         attr |= A_REVERSE;
@@ -138,16 +140,16 @@ int get_square_attr(board b, int x1, int y1, int x2, int y2, int x_cur,
     return attr;
 }
 
-void print_square(WINDOW *win, board b, int x1, int y1, int x2, int y2,
-                  int x_cur, int y_cur, int game_meta) {
+void print_square(WINDOW *win, Game g, int x1, int y1, int x2, int y2,
+                  int x_cur, int y_cur) {
 
-    int attr = get_square_attr(b, x1, y1, x2, y2, x_cur, y_cur, game_meta);
+    int attr = get_square_attr(g, x1, y1, x2, y2, x_cur, y_cur);
 
     char piece_repr;
-    if (b[y2][x2] == 0) {
+    if (g.b[y2][x2] == 0) {
         piece_repr = ' ';
     } else {
-        int piece = get_piece_type(b[y2][x2]);
+        int piece = get_piece_type(g.b[y2][x2]);
         piece_repr = get_piece_repr(piece);
     }
 
@@ -158,15 +160,15 @@ void print_square(WINDOW *win, board b, int x1, int y1, int x2, int y2,
     return;
 }
 
-void print_board(WINDOW *win, board b, int x1, int y1, int x_cursor,
-                 int y_cursor, int game_meta) {
+void print_board(WINDOW *win, Game g, int x1, int y1, int x_cursor,
+                 int y_cursor) {
     if (x1 != -1 && y1 != -1) {
         transform_to_board(&x1, &y1);
     }
     transform_to_board(&x_cursor, &y_cursor);
     for (int y2 = 0; y2 < N_FILES; y2++) {
         for (int x2 = 0; x2 < N_RANKS; x2++) {
-            print_square(win, b, x1, y1, x2, y2, x_cursor, y_cursor, game_meta);
+            print_square(win, g, x1, y1, x2, y2, x_cursor, y_cursor);
         }
     }
 }
@@ -181,14 +183,16 @@ void print_board_labels(WINDOW *win) {
     }
 }
 
-void update_gui(WINDOW *win, board b, int x1, int y1, int x2, int y2,
-                int game_meta, bool debug) {
-    if (debug)
-        print_game_meta_debug(win, game_meta);
-    print_board(win, b, x1, y1, x2, y2, game_meta);
+void update_gui(WINDOW *win, Game g, int x1, int y1, int x2, int y2,
+                bool debug) {
+    if (debug) {
+        print_game_meta_debug(win, g.meta);
+    }
+    print_board(win, g, x1, y1, x2, y2);
     // print_board_labels(win);
     wmove(win, y2, x2);
     wrefresh(win);
+    refresh();
 }
 
 bool init_gui() {
@@ -197,28 +201,26 @@ bool init_gui() {
         return false;
     cbreak(); /* Start curses mode              */
     noecho();
-    // mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON3_PRESSED, NULL);
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
     mouseinterval(0);
     curs_set(0);
     return true;
 }
 
-void attempt_move(WINDOW *win, board b, int *x1, int *y1, int x2, int y2,
-                  int *game_meta) {
+void attempt_move(WINDOW *win, Game *g, int *x1, int *y1, int x2, int y2) {
     int x1_t = *x1;
     int y1_t = *y1;
     transform_to_board(&x1_t, &y1_t);
     transform_to_board(&x2, &y2);
-    if (!make_move(b, x1_t, y1_t, x2, y2, game_meta)) {
+    if (!make_move(g, x1_t, y1_t, x2, y2)) {
         wmove(win, *x1, *y1);
     }
     *x1 = -1;
     *y1 = -1;
 }
 
-int run_gui(board b, int *game_meta) {
-    bool debug = false;
+int run_gui(Game *game) {
+    bool debug = true;
     if (!init_gui())
         return EXIT_FAILURE;
 
@@ -231,7 +233,7 @@ int run_gui(board b, int *game_meta) {
     int x2 = WIN_PADDING;
     int y2 = WIN_HEIGHT - 1 - WIN_PADDING;
     int x_click, y_click;
-    update_gui(win, b, x1, y1, x2, y2, *game_meta, debug);
+    update_gui(win, *game, x1, y1, x2, y2, debug);
     while (1) {
         switch (wgetch(win)) {
         case KEY_UP:
@@ -271,7 +273,7 @@ int run_gui(board b, int *game_meta) {
                     } else {
                         x2 = event.x;
                         y2 = event.y;
-                        attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
+                        attempt_move(win, game, &x1, &y1, x2, y2);
                     }
 
                 } else if (event.bstate & BUTTON3_PRESSED) {
@@ -285,13 +287,13 @@ int run_gui(board b, int *game_meta) {
                 x1 = x2;
                 y1 = y2;
             } else {
-                attempt_move(win, b, &x1, &y1, x2, y2, game_meta);
+                attempt_move(win, game, &x1, &y1, x2, y2);
             }
             break;
         default:
             break;
         }
-        update_gui(win, b, x1, y1, x2, y2, *game_meta, debug);
+        update_gui(win, *game, x1, y1, x2, y2, debug);
     }
 }
 #endif

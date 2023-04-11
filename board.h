@@ -14,6 +14,13 @@
 #include "rules.h"
 
 void init_board(board b) {
+
+    for (int y = 0; y < N_FILES; y++) {
+        for (int x = 0; x < N_RANKS; x++) {
+            b[y][x] = EMPTY_SQUARE;
+        }
+    }
+
     for (int i = 0; i < N_FILES; i++) {
         b[BLACK_PAWN_ORIGIN][i] = BLACK | PAWN;
         b[WHITE_PAWN_ORIGIN][i] = WHITE | PAWN;
@@ -31,96 +38,104 @@ void init_board(board b) {
     b[WHITE_BACK_RANK][4] = WHITE | KING;
 }
 
-bool is_white_square(int i, int j) { return i % 2 ^ j % 2; }
+typedef struct {
+    int turn_number;
+    board b;
+    int meta;
+} Game;
 
-void reset_enpassant(int piece, int *flags) {
+Game make_game(void) {
+    Game g;
+    g.turn_number = 1;
+    init_board(g.b);
+    g.meta = init_game_meta();
+    return g;
+}
 
-    if (*flags & CAN_ENPASSANT_APAWN)
-        *flags ^= CAN_ENPASSANT_APAWN;
-    if (*flags & CAN_ENPASSANT_BPAWN)
-        *flags ^= CAN_ENPASSANT_BPAWN;
-    if (*flags & CAN_ENPASSANT_CPAWN)
-        *flags ^= CAN_ENPASSANT_CPAWN;
-    if (*flags & CAN_ENPASSANT_DPAWN)
-        *flags ^= CAN_ENPASSANT_DPAWN;
-    if (*flags & CAN_ENPASSANT_EPAWN)
-        *flags ^= CAN_ENPASSANT_EPAWN;
-    if (*flags & CAN_ENPASSANT_FPAWN)
-        *flags ^= CAN_ENPASSANT_FPAWN;
-    if (*flags & CAN_ENPASSANT_GPAWN)
-        *flags ^= CAN_ENPASSANT_GPAWN;
-    if (*flags & CAN_ENPASSANT_HPAWN)
-        *flags ^= CAN_ENPASSANT_HPAWN;
+void reset_enpassant(Game *g, int x, int y) {
+    if (g->meta & CAN_ENPASSANT_APAWN)
+        g->meta ^= CAN_ENPASSANT_APAWN;
+    if (g->meta & CAN_ENPASSANT_BPAWN)
+        g->meta ^= CAN_ENPASSANT_BPAWN;
+    if (g->meta & CAN_ENPASSANT_CPAWN)
+        g->meta ^= CAN_ENPASSANT_CPAWN;
+    if (g->meta & CAN_ENPASSANT_DPAWN)
+        g->meta ^= CAN_ENPASSANT_DPAWN;
+    if (g->meta & CAN_ENPASSANT_EPAWN)
+        g->meta ^= CAN_ENPASSANT_EPAWN;
+    if (g->meta & CAN_ENPASSANT_FPAWN)
+        g->meta ^= CAN_ENPASSANT_FPAWN;
+    if (g->meta & CAN_ENPASSANT_GPAWN)
+        g->meta ^= CAN_ENPASSANT_GPAWN;
+    if (g->meta & CAN_ENPASSANT_HPAWN)
+        g->meta ^= CAN_ENPASSANT_HPAWN;
 
-    int p = get_piece_owner(piece);
-    if (p == WHITE && (*flags & WHITE_CAN_ENPASSANT)) {
-        *flags = *flags ^ WHITE_CAN_ENPASSANT;
-    } else if (p == BLACK && (*flags & BLACK_CAN_ENPASSANT)) {
-        *flags = *flags ^ BLACK_CAN_ENPASSANT;
+    int p = get_piece_owner(g->b[y][x]);
+    if (p == WHITE && (g->meta & WHITE_CAN_ENPASSANT)) {
+        g->meta ^= WHITE_CAN_ENPASSANT;
+    } else if (p == BLACK && (g->meta & BLACK_CAN_ENPASSANT)) {
+        g->meta ^= BLACK_CAN_ENPASSANT;
     }
 }
 
-void make_regular_move(board b, int x1, int y1, int x2, int y2,
-                       int *game_meta) {
-    int piece_owner = get_piece_owner(b[y1][x1]);
+void make_regular_move(Game *g, int x1, int y1, int x2, int y2) {
+    int piece_owner = get_piece_owner(g->b[y1][x1]);
     if ( // Handle pawn promotion.
-        get_piece_type(b[y1][x1]) == PAWN &&
+        get_piece_type(g->b[y1][x1]) == PAWN &&
         ((piece_owner == WHITE && y2 == BLACK_BACK_RANK) ||
          (piece_owner == BLACK && y2 == WHITE_BACK_RANK)))
-        b[y2][x2] = QUEEN | piece_owner;
+        g->b[y2][x2] = QUEEN | piece_owner;
     else
-        b[y2][x2] = b[y1][x1];
+        g->b[y2][x2] = g->b[y1][x1];
 
-    reset_enpassant(b[y1][x1], game_meta);
-    if (get_piece_type(b[y1][x1]) == PAWN && abs(y2 - y1) == 2) {
+    reset_enpassant(g, x1, y1);
+    if (get_piece_type(g->b[y1][x1]) == PAWN && abs(y2 - y1) == 2) {
         int file_flag = get_enpassant_flag(x1);
         int player_flag;
         if (piece_owner == WHITE)
             player_flag = BLACK_CAN_ENPASSANT;
         else
             player_flag = WHITE_CAN_ENPASSANT;
-        *game_meta |= file_flag | player_flag;
+        g->meta |= file_flag | player_flag;
     }
 
-    b[y1][x1] = EMPTY_SQUARE;
+    g->b[y1][x1] = EMPTY_SQUARE;
 }
 
-void make_enpassant_move(board b, int x1, int y1, int x2, int y2,
-                         int *game_meta) {
-    reset_enpassant(b[y1][x1], game_meta);
-    b[y2][x2] = b[y1][x1];
-    b[y1][x1] = EMPTY_SQUARE;
-    b[y1][x2] = EMPTY_SQUARE; // Remove passed pawn.
+void make_enpassant_move(Game *g, int x1, int y1, int x2, int y2) {
+    reset_enpassant(g, x1, y1);
+    g->b[y2][x2] = g->b[y1][x1];
+    g->b[y1][x1] = EMPTY_SQUARE;
+    g->b[y1][x2] = EMPTY_SQUARE; // Remove passed pawn.
 }
 
-void make_castling_move(board b, int x1, int y1, int x2, int y2,
-                        int *game_meta) {
-    reset_enpassant(b[y1][x1], game_meta);
-    b[y2][x2] = b[y1][x1];
+void make_castling_move(Game *g, int x1, int y1, int x2, int y2) {
+    reset_enpassant(g, x1, y1);
+    g->b[y2][x2] = g->b[y1][x1];
     if (x2 == N_FILES - 2) { // Short castle.
-        b[y2][x2 - 1] = b[y2][N_FILES - 1];
-        b[y2][N_FILES - 1] = EMPTY_SQUARE;
+        g->b[y2][x2 - 1] = g->b[y2][N_FILES - 1];
+        g->b[y2][N_FILES - 1] = EMPTY_SQUARE;
     } else if (x2 == 2) { // Long castle.
-        b[y2][x2 + 1] = b[y2][0];
-        b[y2][0] = EMPTY_SQUARE;
+        g->b[y2][x2 + 1] = g->b[y2][0];
+        g->b[y2][0] = EMPTY_SQUARE;
     }
-    b[y1][x1] = EMPTY_SQUARE;
+    g->b[y1][x1] = EMPTY_SQUARE;
 }
 
-bool make_move(board b, int x1, int y1, int x2, int y2, int *game_meta) {
-    int piece = b[y1][x1];
+bool make_move(Game *g, int x1, int y1, int x2, int y2) {
+    int piece = g->b[y1][x1];
     int player = get_piece_owner(piece);
-    switch (is_valid_move(b, x1, y1, x2, y2, *game_meta)) {
+    switch (is_valid_move(g->b, g->meta, x1, y1, x2, y2)) {
     case INVALID_MOVE:
         return false;
     case REGULAR_MOVE:
-        make_regular_move(b, x1, y1, x2, y2, game_meta);
+        make_regular_move(g, x1, y1, x2, y2);
         break;
     case CASTLING:
-        make_castling_move(b, x1, y1, x2, y2, game_meta);
+        make_castling_move(g, x1, y1, x2, y2);
         break;
     case ENPASSANT:
-        make_enpassant_move(b, x1, y1, x2, y2, game_meta);
+        make_enpassant_move(g, x1, y1, x2, y2);
         break;
     default:
         return false;
@@ -133,26 +148,11 @@ bool make_move(board b, int x1, int y1, int x2, int y2, int *game_meta) {
         } else {
             flag = BLACK_CAN_CASTLE;
         }
-        if (*game_meta & flag) {
-            *game_meta ^= flag;
+        if (g->meta & flag) {
+            g->meta ^= flag;
         }
     }
     return true;
 }
 
-//
-// typedef struct {
-//    int turn_number;
-//    board * b;
-//    int meta;
-//} Game;
-//
-// Game make_game(void) {
-//    Game g;
-//    g.turn_number = 1;
-//    g.b = {};
-//    g.meta = init_game_meta();
-//    return g;
-//}
-//
 #endif
