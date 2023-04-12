@@ -27,20 +27,44 @@ typedef enum {
 
 void print_game_meta_debug(WINDOW *win, int flags) {
     const char *flag_names[] = {
-        "WHITES_TURN",         "BLACKS_TURN",         "WHITE_IN_CHECK",
-        "BLACK_IN_CHECK",      "WHITE_CAN_CASTLE",    "BLACK_CAN_CASTLE",
-        "WHITE_CAN_ENPASSANT", "BLACK_CAN_ENPASSANT", "CAN_ENPASSANT_APAWN",
-        "CAN_ENPASSANT_BPAWN", "CAN_ENPASSANT_CPAWN", "CAN_ENPASSANT_DPAWN",
-        "CAN_ENPASSANT_EPAWN", "CAN_ENPASSANT_FPAWN", "CAN_ENPASSANT_GPAWN",
+        "WHITES_TURN",
+        "BLACKS_TURN",
+        "WHITE_IN_CHECK",
+        "BLACK_IN_CHECK",
+        "WHITE_CAN_CASTLE_KINGSIDE",
+        "WHITE_CAN_CASTLE_QUEENSIDE",
+        "BLACK_CAN_CASTLE_KINGSIDE",
+        "BLACK_CAN_CASTLE_QUEENSIDE",
+        "WHITE_CAN_ENPASSANT",
+        "BLACK_CAN_ENPASSANT",
+        "CAN_ENPASSANT_APAWN",
+        "CAN_ENPASSANT_BPAWN",
+        "CAN_ENPASSANT_CPAWN",
+        "CAN_ENPASSANT_DPAWN",
+        "CAN_ENPASSANT_EPAWN",
+        "CAN_ENPASSANT_FPAWN",
+        "CAN_ENPASSANT_GPAWN",
         "CAN_ENPASSANT_HPAWN",
     };
 
     const int flag_values[] = {
-        WHITES_TURN,         BLACKS_TURN,         WHITE_IN_CHECK,
-        BLACK_IN_CHECK,      WHITE_CAN_CASTLE,    BLACK_CAN_CASTLE,
-        WHITE_CAN_ENPASSANT, BLACK_CAN_ENPASSANT, CAN_ENPASSANT_APAWN,
-        CAN_ENPASSANT_BPAWN, CAN_ENPASSANT_CPAWN, CAN_ENPASSANT_DPAWN,
-        CAN_ENPASSANT_EPAWN, CAN_ENPASSANT_FPAWN, CAN_ENPASSANT_GPAWN,
+        WHITES_TURN,
+        BLACKS_TURN,
+        WHITE_IN_CHECK,
+        BLACK_IN_CHECK,
+        WHITE_CAN_CASTLE_KINGSIDE,
+        WHITE_CAN_CASTLE_QUEENSIDE,
+        BLACK_CAN_CASTLE_KINGSIDE,
+        BLACK_CAN_CASTLE_QUEENSIDE,
+        WHITE_CAN_ENPASSANT,
+        BLACK_CAN_ENPASSANT,
+        CAN_ENPASSANT_APAWN,
+        CAN_ENPASSANT_BPAWN,
+        CAN_ENPASSANT_CPAWN,
+        CAN_ENPASSANT_DPAWN,
+        CAN_ENPASSANT_EPAWN,
+        CAN_ENPASSANT_FPAWN,
+        CAN_ENPASSANT_GPAWN,
         CAN_ENPASSANT_HPAWN,
     };
     for (int i = 0; i < (sizeof(flag_values) / sizeof(int)); i++) {
@@ -183,12 +207,47 @@ void print_board_labels(WINDOW *win) {
     }
 }
 
+void print_game_info(WINDOW *win, Game g, int x1, int y1, int x2, int y2) {
+
+    int y = 0;
+    int x = 0;
+    char player_string[6];
+    if (g.meta & WHITES_TURN) {
+        strcpy(player_string, "White");
+    } else {
+        strcpy(player_string, "Black");
+    }
+    mvwprintw(win, y, x, "Turn %d: %s to move", g.turn_number, player_string);
+}
+//
+// void print_move_history(Game g, int x1, int y1, int x2, int y2, int
+// move_type) {
+//
+//    char move_string[10];
+//
+//    switch (move_type) {
+//        case REGULAR_MOVE:
+//            break;
+//        case CASTLING:
+//            if (x2 == 2) { // Queenside castle.
+//                strcpy(move_string, "O-O-O");
+//            } else if (x2 == N_FILES - 2) { // Kingside castle.
+//                strcpy(move_string, "O-O")
+//            }
+//
+//            break;
+//    }
+//
+//
+//}
+
 void update_gui(WINDOW *win, Game g, int x1, int y1, int x2, int y2,
                 bool debug) {
     if (debug) {
         print_game_meta_debug(win, g.meta);
     }
     print_board(win, g, x1, y1, x2, y2);
+    print_game_info(win, g, x1, y1, x2, y2);
     // print_board_labels(win);
     wmove(win, y2, x2);
     wrefresh(win);
@@ -226,13 +285,11 @@ int run_gui(Game *game) {
 
     WINDOW *win = new_win();
     MEVENT event;
-    MEVENT event_tmp;
 
     int x1 = -1;
     int y1 = -1;
     int x2 = WIN_PADDING;
     int y2 = WIN_HEIGHT - 1 - WIN_PADDING;
-    int x_click, y_click;
     update_gui(win, *game, x1, y1, x2, y2, debug);
     while (1) {
         switch (wgetch(win)) {

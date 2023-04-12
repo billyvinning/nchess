@@ -122,6 +122,46 @@ void make_castling_move(Game *g, int x1, int y1, int x2, int y2) {
     g->b[y1][x1] = EMPTY_SQUARE;
 }
 
+void update_castling_flags(Game *g, int player, int piece, int x1) {
+
+    bool rm_kingside_flag = false;
+    bool rm_queenside_flag = false;
+    if (piece & ROOK) {
+        if (x1 == 0) {
+            rm_queenside_flag = true;
+        } else if (x1 == N_FILES - 1) {
+            rm_kingside_flag = true;
+        }
+    } else if (piece & KING) {
+        rm_kingside_flag = true;
+        rm_queenside_flag = true;
+    }
+
+    int kingside_flag = (player == WHITE) ? WHITE_CAN_CASTLE_KINGSIDE
+                                          : BLACK_CAN_CASTLE_KINGSIDE;
+    int queenside_flag = (player == WHITE) ? WHITE_CAN_CASTLE_QUEENSIDE
+                                           : BLACK_CAN_CASTLE_QUEENSIDE;
+
+    if (rm_kingside_flag && g->meta & kingside_flag) {
+        g->meta ^= kingside_flag;
+    }
+    if (rm_queenside_flag && g->meta & queenside_flag) {
+        g->meta ^= queenside_flag;
+    }
+}
+
+void update_turn_flags(Game *g, int player) {
+
+    if (player == BLACK) {
+        g->meta ^= BLACKS_TURN;
+        g->meta |= WHITES_TURN;
+        g->turn_number++;
+    } else {
+        g->meta ^= WHITES_TURN;
+        g->meta |= BLACKS_TURN;
+    }
+}
+
 bool make_move(Game *g, int x1, int y1, int x2, int y2) {
     int piece = g->b[y1][x1];
     int player = get_piece_owner(piece);
@@ -141,17 +181,11 @@ bool make_move(Game *g, int x1, int y1, int x2, int y2) {
         return false;
     }
 
-    if (piece & KING) {
-        int flag;
-        if (player == WHITE) {
-            flag = WHITE_CAN_CASTLE;
-        } else {
-            flag = BLACK_CAN_CASTLE;
-        }
-        if (g->meta & flag) {
-            g->meta ^= flag;
-        }
-    }
+    // Update castling rules
+    update_castling_flags(g, player, piece, x1);
+    // Switch sides and update turn number.
+    update_turn_flags(g, player);
+
     return true;
 }
 

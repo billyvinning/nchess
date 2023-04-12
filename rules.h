@@ -74,21 +74,19 @@ void add_straight_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
 
 void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
                          int y0) {
-    int curr_node;
+    int curr_node, direction, can_enpassant, enpassant_rank, x;
     int src_owner = get_piece_owner(b[y0][x0]);
     int src_node = transform_to_adj(x0, y0);
-    int direction;
     bool is_on_back_rank = false;
-    bool can_enpassant;
     if (src_owner == WHITE) {
         can_enpassant = game_meta & WHITE_CAN_ENPASSANT;
-        if (y0 == WHITE_PAWN_ORIGIN)
-            is_on_back_rank = true;
+        enpassant_rank = BLACK_PAWN_ORIGIN + 1;
+        is_on_back_rank = y0 == WHITE_PAWN_ORIGIN;
         direction = -1;
     } else if (src_owner == BLACK) {
         can_enpassant = game_meta & BLACK_CAN_ENPASSANT;
-        if (y0 == BLACK_PAWN_ORIGIN)
-            is_on_back_rank = true;
+        enpassant_rank = WHITE_PAWN_ORIGIN - 1;
+        is_on_back_rank = y0 == BLACK_PAWN_ORIGIN;
         direction = 1;
     } else {
         return;
@@ -105,7 +103,6 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
         m[src_node][curr_node] = REGULAR_MOVE;
     }
 
-    int x;
     int enpassant_file = get_enpassant_file(game_meta);
     const int dx[] = {1, -1};
     for (int i = 0; i < (sizeof(dx) / sizeof(int)); i++) {
@@ -113,7 +110,8 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
         if (x < 0 || x >= N_FILES)
             continue;
         curr_node = transform_to_adj(x, y);
-        if (b[y][x] == EMPTY_SQUARE && can_enpassant && x == enpassant_file) {
+        if (b[y][x] == EMPTY_SQUARE && can_enpassant && x == enpassant_file &&
+            y == enpassant_rank) {
             m[src_node][curr_node] = ENPASSANT;
         } else if (b[y][x] != EMPTY_SQUARE &&
                    get_piece_owner(b[y][x]) != src_owner) {
@@ -143,20 +141,29 @@ void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
 void add_castling_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
                         int y0) {
     int piece_owner = get_piece_owner(b[y0][x0]);
-    bool can_castle =
-        ((piece_owner == WHITE && (game_meta & WHITE_CAN_CASTLE)) ||
-         (piece_owner == BLACK && (game_meta & BLACK_CAN_CASTLE)));
-    if (!can_castle)
+    bool can_castle_kingside =
+        ((piece_owner == WHITE && (game_meta & WHITE_CAN_CASTLE_KINGSIDE)) ||
+         (piece_owner == BLACK && (game_meta & BLACK_CAN_CASTLE_KINGSIDE)));
+
+    bool can_castle_queenside =
+        ((piece_owner == WHITE && (game_meta & WHITE_CAN_CASTLE_QUEENSIDE)) ||
+         (piece_owner == BLACK && (game_meta & BLACK_CAN_CASTLE_QUEENSIDE)));
+
+    if (!can_castle_kingside && !can_castle_queenside)
         return;
     int src_node = transform_to_adj(x0, y0);
-    if (b[y0][x0 + 1] == EMPTY_SQUARE && b[y0][x0 + 2] == EMPTY_SQUARE) {
-        int dest_node = transform_to_adj(x0 + 2, y0);
-        m[src_node][dest_node] = CASTLING;
+    if (can_castle_kingside) {
+        if (b[y0][x0 + 1] == EMPTY_SQUARE && b[y0][x0 + 2] == EMPTY_SQUARE) {
+            int dest_node = transform_to_adj(x0 + 2, y0);
+            m[src_node][dest_node] = CASTLING;
+        }
     }
-    if (b[y0][x0 - 1] == EMPTY_SQUARE && b[y0][x0 - 2] == EMPTY_SQUARE &&
-        b[y0][x0 - 3] == EMPTY_SQUARE) {
-        int dest_node = transform_to_adj(x0 - 2, y0);
-        m[src_node][dest_node] = CASTLING;
+    if (can_castle_queenside) {
+        if (b[y0][x0 - 1] == EMPTY_SQUARE && b[y0][x0 - 2] == EMPTY_SQUARE &&
+            b[y0][x0 - 3] == EMPTY_SQUARE) {
+            int dest_node = transform_to_adj(x0 - 2, y0);
+            m[src_node][dest_node] = CASTLING;
+        }
     }
 }
 
@@ -237,6 +244,13 @@ bool is_in_check(board b, int p) {
 }
 
 int is_valid_move(board b, int game_meta, int x1, int y1, int x2, int y2) {
+    int player = get_piece_owner(b[y1][x1]);
+    if (player == WHITE && (game_meta & BLACKS_TURN)) {
+        return false;
+    } else if (player == BLACK && (game_meta & WHITES_TURN)) {
+        return false;
+    }
+
     if (b[y1][x1] == EMPTY_SQUARE)
         return INVALID_MOVE;
     else if (x1 == x2 && y1 == y2)
@@ -252,7 +266,7 @@ int is_valid_move(board b, int game_meta, int x1, int y1, int x2, int y2) {
     copy_board(b, b_copy);
     b_copy[y2][x2] = b_copy[y1][x1];
     b_copy[y1][x1] = EMPTY_SQUARE;
-    if (is_in_check(b_copy, get_piece_owner(b[y1][x1]))) {
+    if (is_in_check(b_copy, player)) {
         return INVALID_MOVE;
     }
 
