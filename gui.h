@@ -2,6 +2,7 @@
 #define GUI_H
 
 #include "board.h"
+#include "notation.h"
 #include "pieces.h"
 #include <math.h>
 #include <ncurses.h>
@@ -9,8 +10,8 @@
 
 #define WIN_PADDING 1
 #define SQUARE_WIDTH 3
-#define WIN_HEIGHT N_RANKS + 2 * WIN_PADDING
-#define WIN_WIDTH SQUARE_WIDTH *N_FILES + 2 * WIN_PADDING
+#define WIN_HEIGHT (N_RANKS + 2 * WIN_PADDING)
+#define WIN_WIDTH (SQUARE_WIDTH * N_FILES + 2 * WIN_PADDING)
 
 #define BLACK_PIECE_COLOUR COLOR_RED
 #define WHITE_PIECE_COLOUR COLOR_BLUE
@@ -18,6 +19,7 @@
 #define WHITE_SQUARE_COLOUR COLOR_WHITE
 #define WHITE_HIGHLIGHTED_SQUARE_COLOUR COLOR_CYAN
 #define BLACK_HIGHLIGHTED_SQUARE_COLOUR COLOR_MAGENTA
+#define GAME_INFO_DELIM ','
 typedef enum {
     WHITE_SQUARE = 0x4,
     BLACK_SQUARE = 0x8,
@@ -25,7 +27,12 @@ typedef enum {
     BLACK_HIGHLIGHTED_SQUARE = 0x20
 } SquareBackgroundType;
 
-void print_game_meta_debug(WINDOW *win, int flags) {
+typedef struct {
+    WINDOW *main;
+    WINDOW *info;
+} WINDOWS;
+
+void print_game_meta_debug(int flags) {
     const char *flag_names[] = {
         "WHITES_TURN",
         "BLACKS_TURN",
@@ -88,7 +95,7 @@ void transform_to_board(int *x, int *y) {
     return;
 }
 
-WINDOW *new_win() {
+WINDOW *new_main_win() {
     WINDOW *win;
     int starty = (LINES - WIN_HEIGHT) / 2;
     int startx = (COLS - WIN_WIDTH) / 2;
@@ -96,10 +103,25 @@ WINDOW *new_win() {
     keypad(win, TRUE);
     box(win, 0, 0);
     refresh();
-    int x, y;
-    getbegyx(win, y, x);
+    return win;
+}
+
+WINDOW *new_info_win() {
+    WINDOW *win;
+    int starty = (LINES - WIN_HEIGHT) / 2;
+    int startx = ((COLS - WIN_WIDTH) / 2) + WIN_WIDTH + 1;
+    win = newwin(WIN_HEIGHT, 2 * WIN_WIDTH / 3, starty, startx);
+    keypad(win, TRUE);
+    box(win, 0, 0);
     refresh();
     return win;
+}
+
+WINDOWS init_windows() {
+    WINDOW *main = new_main_win();
+    WINDOW *info = new_info_win();
+    WINDOWS wins = {main, info};
+    return wins;
 }
 
 bool init_colours(void) {
@@ -132,17 +154,11 @@ int get_colour_pair(Game g, int x1, int y1, int x2, int y2) {
         x1 != -1 && y1 != -1 && is_valid_move(g.b, g.meta, x1, y1, x2, y2);
 
     if (is_highlighted) {
-        if (get_piece_owner(g.b[y1][x1]) == WHITE) {
-            background_type = WHITE_HIGHLIGHTED_SQUARE;
-        } else {
-            background_type = BLACK_HIGHLIGHTED_SQUARE;
-        }
+        background_type = get_piece_owner(g.b[y1][x1]) == WHITE
+                              ? WHITE_HIGHLIGHTED_SQUARE
+                              : BLACK_HIGHLIGHTED_SQUARE;
     } else {
-        if (is_white_square(x2, y2)) {
-            background_type = WHITE_SQUARE;
-        } else {
-            background_type = BLACK_SQUARE;
-        }
+        background_type = is_white_square(x2, y2) ? WHITE_SQUARE : BLACK_SQUARE;
     }
 
     int square_owner = get_piece_owner(g.b[y2][x2]);
@@ -207,50 +223,57 @@ void print_board_labels(WINDOW *win) {
     }
 }
 
-void print_game_info(WINDOW *win, Game g, int x1, int y1, int x2, int y2) {
+void print_game_info(WINDOW *win, Game g, int x1, int y1, int x2, int y2,
+                     int move_type) {
+    static char **ptr = NULL;
+    static int axis_0_size = 0;
+    static int axis_1_size = 12;
+    static int axis_1_cursor = 0;
 
-    int y = 0;
-    int x = 0;
-    char player_string[6];
-    if (g.meta & WHITES_TURN) {
-        strcpy(player_string, "White");
+    if (ptr == NULL)
+        ptr = malloc(sizeof(char *));
+
+    if (g.move_number % 2 == 0) {
+        axis_0_size++;
+        void *rtn = realloc(ptr, axis_0_size * sizeof(char *));
+        if (rtn == NULL) {
+            exit(1);
+        }
+        ptr = rtn;
+        ptr[axis_0_size - 1] = malloc(axis_1_size * sizeof(char));
+        char tmp[10];
+        notate_move(g, x1, y1, x2, y2, move_type, tmp);
+        sprintf(ptr[axis_0_size - 1], "%d. %s", g.move_number / 2, tmp);
     } else {
-        strcpy(player_string, "Black");
+        char tmp[10];
+        notate_move(g, x1, y1, x2, y2, move_type, tmp);
+        sprintf(ptr[axis_0_size - 1], "%s %s", ptr[axis_0_size - 1], tmp);
     }
-    mvwprintw(win, y, x, "Turn %d: %s to move", g.turn_number, player_string);
-}
-//
-// void print_move_history(Game g, int x1, int y1, int x2, int y2, int
-// move_type) {
-//
-//    char move_string[10];
-//
-//    switch (move_type) {
-//        case REGULAR_MOVE:
-//            break;
-//        case CASTLING:
-//            if (x2 == 2) { // Queenside castle.
-//                strcpy(move_string, "O-O-O");
-//            } else if (x2 == N_FILES - 2) { // Kingside castle.
-//                strcpy(move_string, "O-O")
-//            }
-//
-//            break;
-//    }
-//
-//
-//}
 
-void update_gui(WINDOW *win, Game g, int x1, int y1, int x2, int y2,
+    int i = 0;
+    int start_ix = 0;
+    int max_y = getmaxy(win) - 2;
+    if (axis_0_size > max_y)
+        start_ix = axis_0_size - max_y;
+
+    wclear(win);
+    box(win, 0, 0);
+    while (start_ix + i < axis_0_size && i < max_y) {
+        mvwprintw(win, i + 1, 1, "%s", ptr[start_ix + i]);
+        i++;
+    }
+}
+
+void update_gui(WINDOWS wins, Game g, int x1, int y1, int x2, int y2,
                 bool debug) {
     if (debug) {
-        print_game_meta_debug(win, g.meta);
+        print_game_meta_debug(g.meta);
     }
-    print_board(win, g, x1, y1, x2, y2);
-    print_game_info(win, g, x1, y1, x2, y2);
+    print_board(wins.main, g, x1, y1, x2, y2);
     // print_board_labels(win);
-    wmove(win, y2, x2);
-    wrefresh(win);
+    wmove(wins.main, y2, x2);
+    wrefresh(wins.main);
+    wrefresh(wins.info);
     refresh();
 }
 
@@ -266,13 +289,16 @@ bool init_gui() {
     return true;
 }
 
-void attempt_move(WINDOW *win, Game *g, int *x1, int *y1, int x2, int y2) {
+void attempt_move(WINDOWS wins, Game *g, int *x1, int *y1, int x2, int y2) {
     int x1_t = *x1;
     int y1_t = *y1;
     transform_to_board(&x1_t, &y1_t);
     transform_to_board(&x2, &y2);
-    if (!make_move(g, x1_t, y1_t, x2, y2)) {
-        wmove(win, *x1, *y1);
+    int move_type = make_move(g, x1_t, y1_t, x2, y2);
+    if (move_type == INVALID_MOVE) {
+        wmove(wins.main, *x1, *y1);
+    } else {
+        print_game_info(wins.info, *g, x1_t, y1_t, x2, y2, move_type);
     }
     *x1 = -1;
     *y1 = -1;
@@ -283,16 +309,16 @@ int run_gui(Game *game) {
     if (!init_gui())
         return EXIT_FAILURE;
 
-    WINDOW *win = new_win();
+    WINDOWS wins = init_windows();
     MEVENT event;
 
     int x1 = -1;
     int y1 = -1;
     int x2 = WIN_PADDING;
     int y2 = WIN_HEIGHT - 1 - WIN_PADDING;
-    update_gui(win, *game, x1, y1, x2, y2, debug);
+    update_gui(wins, *game, x1, y1, x2, y2, debug);
     while (1) {
-        switch (wgetch(win)) {
+        switch (wgetch(wins.main)) {
         case KEY_UP:
 
             if (y2 == WIN_PADDING)
@@ -321,7 +347,7 @@ int run_gui(Game *game) {
         case KEY_MOUSE:
             if (getmouse(&event) == OK) {
                 if (event.bstate & BUTTON1_PRESSED) {
-                    if (!wmouse_trafo(win, &event.y, &event.x, false))
+                    if (!wmouse_trafo(wins.main, &event.y, &event.x, false))
                         break;
 
                     if (x1 == -1 && y1 == -1) {
@@ -330,7 +356,7 @@ int run_gui(Game *game) {
                     } else {
                         x2 = event.x;
                         y2 = event.y;
-                        attempt_move(win, game, &x1, &y1, x2, y2);
+                        attempt_move(wins, game, &x1, &y1, x2, y2);
                     }
 
                 } else if (event.bstate & BUTTON3_PRESSED) {
@@ -344,13 +370,13 @@ int run_gui(Game *game) {
                 x1 = x2;
                 y1 = y2;
             } else {
-                attempt_move(win, game, &x1, &y1, x2, y2);
+                attempt_move(wins, game, &x1, &y1, x2, y2);
             }
             break;
         default:
             break;
         }
-        update_gui(win, *game, x1, y1, x2, y2, debug);
+        update_gui(wins, *game, x1, y1, x2, y2, debug);
     }
 }
 #endif

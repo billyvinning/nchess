@@ -39,14 +39,14 @@ void init_board(board b) {
 }
 
 typedef struct {
-    int turn_number;
+    int move_number;
     board b;
     int meta;
 } Game;
 
 Game make_game(void) {
     Game g;
-    g.turn_number = 1;
+    g.move_number = 1;
     init_board(g.b);
     g.meta = init_game_meta();
     return g;
@@ -152,23 +152,45 @@ void update_castling_flags(Game *g, int player, int piece, int x1) {
 
 void update_turn_flags(Game *g, int player) {
 
+    g->move_number++;
     if (player == BLACK) {
         g->meta ^= BLACKS_TURN;
         g->meta |= WHITES_TURN;
-        g->turn_number++;
     } else {
         g->meta ^= WHITES_TURN;
         g->meta |= BLACKS_TURN;
     }
 }
 
-bool make_move(Game *g, int x1, int y1, int x2, int y2) {
+void update_check_flags(Game *g) {
+    if (is_in_check(g->b, WHITE)) {
+        if (!(g->meta & WHITE_IN_CHECK))
+            g->meta |= WHITE_IN_CHECK;
+    } else {
+        if (g->meta & WHITE_IN_CHECK)
+            g->meta ^= WHITE_IN_CHECK;
+    }
+
+    if (is_in_check(g->b, BLACK)) {
+        if (!(g->meta & BLACK_IN_CHECK))
+            g->meta |= BLACK_IN_CHECK;
+    } else {
+        if (g->meta & BLACK_IN_CHECK)
+            g->meta ^= BLACK_IN_CHECK;
+    }
+}
+
+int make_move(Game *g, int x1, int y1, int x2, int y2) {
     int piece = g->b[y1][x1];
     int player = get_piece_owner(piece);
-    switch (is_valid_move(g->b, g->meta, x1, y1, x2, y2)) {
+    int move_type = is_valid_move(g->b, g->meta, x1, y1, x2, y2);
+    switch (move_type) {
     case INVALID_MOVE:
-        return false;
+        return INVALID_MOVE;
     case REGULAR_MOVE:
+        make_regular_move(g, x1, y1, x2, y2);
+        break;
+    case TAKING_MOVE:
         make_regular_move(g, x1, y1, x2, y2);
         break;
     case CASTLING:
@@ -178,15 +200,16 @@ bool make_move(Game *g, int x1, int y1, int x2, int y2) {
         make_enpassant_move(g, x1, y1, x2, y2);
         break;
     default:
-        return false;
+        return INVALID_MOVE;
     }
 
     // Update castling rules
     update_castling_flags(g, player, piece, x1);
     // Switch sides and update turn number.
     update_turn_flags(g, player);
-
-    return true;
+    // Check whether players are in check or checkmate
+    update_check_flags(g);
+    return move_type;
 }
 
 #endif

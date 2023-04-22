@@ -11,8 +11,9 @@
 typedef enum {
     INVALID_MOVE = 0,
     REGULAR_MOVE = 1,
-    CASTLING = 2,
-    ENPASSANT = 3
+    TAKING_MOVE = 2,
+    CASTLING = 3,
+    ENPASSANT = 4
 } MoveCodes;
 
 int transform_to_adj(int i, int j) { return i + (N_RANKS * j); }
@@ -41,9 +42,12 @@ void add_directional_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0,
         curr_node_owner = get_piece_owner(b[y][x]);
 
         if (curr_node_owner != src_node_owner) {
-            m[prev_node][curr_node] = REGULAR_MOVE;
+            if (curr_node_owner == flip_player(src_node_owner))
+                m[prev_node][curr_node] = TAKING_MOVE;
+            else
+                m[prev_node][curr_node] = REGULAR_MOVE;
         }
-        if (curr_node_owner != NOOWNER) {
+        if (curr_node_owner != NOOWNER) { // Blocking piece
             break;
         }
 
@@ -115,13 +119,13 @@ void add_pawn_like_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
             m[src_node][curr_node] = ENPASSANT;
         } else if (b[y][x] != EMPTY_SQUARE &&
                    get_piece_owner(b[y][x]) != src_owner) {
-            m[src_node][curr_node] = REGULAR_MOVE;
+            m[src_node][curr_node] = TAKING_MOVE;
         }
     }
 }
 
 void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
-    int x, y, curr_node;
+    int x, y, curr_node, curr_node_owner;
     const int dx[] = {1, -1, 2, -2, 2, -2, 1, -1};
     const int dy[] = {2, 2, 1, 1, -1, -1, -2, -2};
     int src_node_owner = get_piece_owner(b[y0][x0]);
@@ -131,9 +135,13 @@ void add_knight_like_edges(int m[][ADJ_M_WIDTH], board b, int x0, int y0) {
         y = y0 + dy[i];
         if (x < 0 || x >= N_FILES || y < 0 || y >= N_RANKS)
             continue;
-        if (get_piece_owner(b[y][x]) != src_node_owner) {
+        curr_node_owner = get_piece_owner(b[y][x]);
+        if (curr_node_owner != src_node_owner) {
             curr_node = transform_to_adj(x, y);
-            m[src_node][curr_node] = REGULAR_MOVE;
+            if (curr_node_owner == flip_player(src_node_owner))
+                m[src_node][curr_node] = TAKING_MOVE;
+            else
+                m[src_node][curr_node] = REGULAR_MOVE;
         }
     }
 }
@@ -168,12 +176,12 @@ void add_castling_edges(int m[][ADJ_M_WIDTH], board b, int game_meta, int x0,
 }
 
 int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
-    if (m[source][dest])
+    if (m[source][dest] != INVALID_MOVE)
         return m[source][dest];
     for (int i = 0; i < ADJ_M_WIDTH; i++) {
-        if (m[source][i]) {
+        if (m[source][i] != INVALID_MOVE) {
             int rtn = has_path(m, i, dest);
-            if (rtn)
+            if (rtn != INVALID_MOVE)
                 return rtn;
         }
     }
