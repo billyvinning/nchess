@@ -1,5 +1,5 @@
-termichess
-==========
+nchess
+======
 
 Chess in the terminal; written in C99.
 

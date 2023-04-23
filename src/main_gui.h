@@ -30,10 +30,9 @@ char *CHOICE_LABELS[] = {
     "Two Player", "Quit"};
 int N_CHOICES = sizeof(CHOICES) / sizeof(int);
 char LEFT_FOOTER[] = "Licensed under GPL-3.0 in 2023";
-char RIGHT_FOOTER[] = "github.com/billyvinning/termichess";
-wchar_t *TITLE[] = {L"╔╦╗┌─┐┬─┐┌┬┐┬┌─┐┬ ┬┌─┐┌─┐┌─┐",
-                    L" ║ ├┤ ├┬┘│││││  ├─┤├┤ └─┐└─┐",
-                    L" ╩ └─┘┴└─┴ ┴┴└─┘┴ ┴└─┘└─┘└─┘"};
+char RIGHT_FOOTER[] = "github.com/billyvinning/nchess";
+wchar_t *TITLE[] = {L"┌┐┌┌─┐┬ ┬┌─┐┌─┐┌─┐", L"││││  ├─┤├┤ └─┐└─┐",
+                    L"┘└┘└─┘┴ ┴└─┘└─┘└─┘"};
 
 void print_scr(void) {
     int title_nrows = (sizeof(TITLE) / sizeof(TITLE[0]));
