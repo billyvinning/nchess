@@ -2,6 +2,7 @@
 #define GUI_H
 
 #include "board.h"
+#include "gui_utils.h"
 #include "notation.h"
 #include "pieces.h"
 #include <math.h>
@@ -81,8 +82,6 @@ void print_game_meta_debug(int flags) {
     }
 }
 
-bool is_white_square(int i, int j) { return i % 2 ^ j % 2; }
-
 void transform_to_win(int *x, int *y) {
     *x = (SQUARE_WIDTH * (*x)) + WIN_PADDING;
     *y = (*y + WIN_PADDING);
@@ -121,6 +120,7 @@ WINDOWS init_windows() {
     WINDOW *main = new_main_win();
     WINDOW *info = new_info_win();
     WINDOWS wins = {main, info};
+
     return wins;
 }
 
@@ -277,18 +277,6 @@ void update_gui(WINDOWS wins, Game g, int x1, int y1, int x2, int y2,
     refresh();
 }
 
-bool init_gui() {
-    initscr();
-    if (!init_colours())
-        return false;
-    cbreak(); /* Start curses mode              */
-    noecho();
-    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
-    mouseinterval(0);
-    curs_set(0);
-    return true;
-}
-
 void attempt_move(WINDOWS wins, Game *g, int *x1, int *y1, int x2, int y2) {
     int x1_t = *x1;
     int y1_t = *y1;
@@ -304,11 +292,10 @@ void attempt_move(WINDOWS wins, Game *g, int *x1, int *y1, int x2, int y2) {
     *y1 = -1;
 }
 
-int run_gui(Game *game) {
+int run_game_gui(Game *game) {
     bool debug = true;
-    if (!init_gui())
-        return EXIT_FAILURE;
-
+    init_colours();
+    init_gui();
     WINDOWS wins = init_windows();
     MEVENT event;
 
