@@ -292,8 +292,7 @@ void attempt_move(WINDOWS wins, Game *g, int *x1, int *y1, int x2, int y2) {
     *y1 = -1;
 }
 
-int run_game_gui(Game *game) {
-    bool debug = true;
+int run_game_gui(Game *game, bool debug) {
     init_colours();
     init_gui();
     WINDOWS wins = init_windows();
