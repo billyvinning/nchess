@@ -188,9 +188,8 @@ int has_path(int m[][ADJ_M_WIDTH], int source, int dest) {
     return INVALID_MOVE;
 }
 
-int is_valid_piece_move(board b, int game_meta, int x1, int y1, int x2,
-                        int y2) {
-    int m[ADJ_M_WIDTH][ADJ_M_WIDTH] = {{INVALID_MOVE}};
+void fill_adjacency_matrix(board b, int game_meta, int x1, int y1,
+                           int m[][ADJ_M_WIDTH]) {
     switch (get_piece_type(b[y1][x1])) {
     case PAWN:
         add_pawn_like_edges(m, b, game_meta, x1, y1);
@@ -214,7 +213,12 @@ int is_valid_piece_move(board b, int game_meta, int x1, int y1, int x2,
         add_castling_edges(m, b, game_meta, x1, y1);
         break;
     }
+}
 
+int is_valid_piece_move(board b, int game_meta, int x1, int y1, int x2,
+                        int y2) {
+    int m[ADJ_M_WIDTH][ADJ_M_WIDTH] = {{INVALID_MOVE}};
+    fill_adjacency_matrix(b, game_meta, x1, y1, m);
     int i = transform_to_adj(x1, y1);
     int j = transform_to_adj(x2, y2);
     return has_path(m, i, j);

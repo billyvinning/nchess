@@ -52,6 +52,12 @@ Game make_game(void) {
     return g;
 }
 
+void copy_game(Game src, Game *dest) {
+    copy_board(src.b, dest->b);
+    dest->meta = src.meta;
+    dest->move_number = src.move_number;
+}
+
 void reset_enpassant(Game *g, int x, int y) {
     if (g->meta & CAN_ENPASSANT_APAWN)
         g->meta ^= CAN_ENPASSANT_APAWN;
@@ -121,6 +127,58 @@ void make_castling_move(Game *g, int x1, int y1, int x2, int y2) {
     }
     g->b[y1][x1] = EMPTY_SQUARE;
 }
+int _make_move(Game *g, int x1, int y1, int x2, int y2) {
+    int move_type = is_valid_move(g->b, g->meta, x1, y1, x2, y2);
+    switch (move_type) {
+    case INVALID_MOVE:
+        return INVALID_MOVE;
+    case REGULAR_MOVE:
+        make_regular_move(g, x1, y1, x2, y2);
+        break;
+    case TAKING_MOVE:
+        make_regular_move(g, x1, y1, x2, y2);
+        break;
+    case CASTLING:
+        make_castling_move(g, x1, y1, x2, y2);
+        break;
+    case ENPASSANT:
+        make_enpassant_move(g, x1, y1, x2, y2);
+        break;
+    default:
+        return INVALID_MOVE;
+    }
+    return move_type;
+}
+
+bool is_in_mate(Game g, int p) {
+    if (!is_in_check(g.b, p))
+        return false;
+    // Iterate through all players pieces and all their possible moves
+    // and check whether still in mate.
+    for (int x1 = 0; x1 < N_RANKS; x1++) {
+        for (int y1 = 0; y1 < N_FILES; y1++) {
+            if (get_piece_owner(g.b[y1][x1]) != p)
+                continue;
+            // Construct adjacency matrix.
+            int m[ADJ_M_WIDTH][ADJ_M_WIDTH] = {{INVALID_MOVE}};
+            fill_adjacency_matrix(g.b, g.meta, x1, y1, m);
+            // Iterate through all possible moves.
+            int i = transform_to_adj(x1, y1);
+            for (int j = 0; j < ADJ_M_WIDTH; j++) {
+                if (i != j && has_path(m, i, j)) {
+                    Game g_copy = make_game();
+                    copy_game(g, &g_copy);
+                    int x2, y2;
+                    transform_from_adj(j, &x2, &y2);
+                    _make_move(&g_copy, x1, y1, x2, y2);
+                    if (!(is_in_check(g_copy.b, p)))
+                        return false;
+                }
+            }
+        }
+    }
+    return true;
+}
 
 void update_castling_flags(Game *g, int player, int piece, int x1) {
 
@@ -166,6 +224,9 @@ void update_check_flags(Game *g) {
     if (is_in_check(g->b, WHITE)) {
         if (!(g->meta & WHITE_IN_CHECK))
             g->meta |= WHITE_IN_CHECK;
+        if (is_in_mate(*g, WHITE)) {
+            g->meta |= WHITE_IN_MATE;
+        }
     } else {
         if (g->meta & WHITE_IN_CHECK)
             g->meta ^= WHITE_IN_CHECK;
@@ -174,6 +235,9 @@ void update_check_flags(Game *g) {
     if (is_in_check(g->b, BLACK)) {
         if (!(g->meta & BLACK_IN_CHECK))
             g->meta |= BLACK_IN_CHECK;
+        if (is_in_mate(*g, BLACK)) {
+            g->meta |= BLACK_IN_MATE;
+        }
     } else {
         if (g->meta & BLACK_IN_CHECK)
             g->meta ^= BLACK_IN_CHECK;
@@ -183,26 +247,9 @@ void update_check_flags(Game *g) {
 int make_move(Game *g, int x1, int y1, int x2, int y2) {
     int piece = g->b[y1][x1];
     int player = get_piece_owner(piece);
-    int move_type = is_valid_move(g->b, g->meta, x1, y1, x2, y2);
-    switch (move_type) {
-    case INVALID_MOVE:
+    int move_type = _make_move(g, x1, y1, x2, y2);
+    if (move_type == INVALID_MOVE)
         return INVALID_MOVE;
-    case REGULAR_MOVE:
-        make_regular_move(g, x1, y1, x2, y2);
-        break;
-    case TAKING_MOVE:
-        make_regular_move(g, x1, y1, x2, y2);
-        break;
-    case CASTLING:
-        make_castling_move(g, x1, y1, x2, y2);
-        break;
-    case ENPASSANT:
-        make_enpassant_move(g, x1, y1, x2, y2);
-        break;
-    default:
-        return INVALID_MOVE;
-    }
-
     // Update castling rules
     update_castling_flags(g, player, piece, x1);
     // Switch sides and update turn number.
@@ -211,5 +258,4 @@ int make_move(Game *g, int x1, int y1, int x2, int y2) {
     update_check_flags(g);
     return move_type;
 }
-
 #endif

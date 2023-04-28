@@ -39,6 +39,8 @@ void print_game_meta_debug(int flags) {
         "BLACKS_TURN",
         "WHITE_IN_CHECK",
         "BLACK_IN_CHECK",
+        "WHITE_IN_MATE",
+        "BLACK_IN_MATE",
         "WHITE_CAN_CASTLE_KINGSIDE",
         "WHITE_CAN_CASTLE_QUEENSIDE",
         "BLACK_CAN_CASTLE_KINGSIDE",
@@ -60,6 +62,8 @@ void print_game_meta_debug(int flags) {
         BLACKS_TURN,
         WHITE_IN_CHECK,
         BLACK_IN_CHECK,
+        WHITE_IN_MATE,
+        BLACK_IN_MATE,
         WHITE_CAN_CASTLE_KINGSIDE,
         WHITE_CAN_CASTLE_QUEENSIDE,
         BLACK_CAN_CASTLE_KINGSIDE,
@@ -264,6 +268,25 @@ void print_game_info(WINDOW *win, Game g, int x1, int y1, int x2, int y2,
     }
 }
 
+void print_game_finish_screen(WINDOWS wins, Game g) {
+    int width = 12;
+    int height = 3;
+    // WINDOW * win = subwin(
+    //    wins.main,
+    //    height,
+    //    width,
+    //    getmaxy(wins.main), //(getmaxy(wins.main) - height) / 2,
+    //    0//(getmaxx(wins.main) - width) / 2
+    //);
+    // box(win, 0, 0);
+    if (g.meta & WHITE_IN_MATE)
+        mvwprintw(wins.main, getmaxy(wins.main) / 2, getmaxx(wins.main) / 2,
+                  "Black wins.");
+    else
+        mvwprintw(wins.main, getmaxy(wins.main) / 2, getmaxx(wins.main) / 2,
+                  "White wins.");
+}
+
 void update_gui(WINDOWS wins, Game g, int x1, int y1, int x2, int y2,
                 bool debug) {
     if (debug) {
@@ -274,6 +297,9 @@ void update_gui(WINDOWS wins, Game g, int x1, int y1, int x2, int y2,
     wmove(wins.main, y2, x2);
     wrefresh(wins.main);
     wrefresh(wins.info);
+    if (g.meta & WHITE_IN_MATE || g.meta & BLACK_IN_MATE) {
+        print_game_finish_screen(wins, g);
+    }
     refresh();
 }
 
@@ -306,7 +332,6 @@ int run_game_gui(Game *game, bool debug) {
     while (1) {
         switch (wgetch(wins.main)) {
         case KEY_UP:
-
             if (y2 == WIN_PADDING)
                 y2 = WIN_HEIGHT - WIN_PADDING - 1;
             else
