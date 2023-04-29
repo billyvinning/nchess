@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ncurses.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "board.h"
-#include "game_gui.h"
-#include "gui_utils.h"
-#include "main_gui.h"
+#include "gui.h"
 
 const char *argp_program_version = "nchess 0.1";
 const char *argp_program_bug_address = "github.com/billyvinning/nchess";
@@ -40,20 +42,21 @@ int main(int argc, char *argv[]) {
     arguments.isDebugMode = false;
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    init_gui();
-    switch (run_main_gui()) {
-    case ONE_PLAYER:
-        break;
-    case TWO_PLAYER:
-        clear();
-        refresh();
-        Game g = make_game();
-        run_game_gui(&g, arguments.isDebugMode);
-        break;
-    case QUIT:
-        break;
+    // Start GUI.
+    initscr();
+    if (!has_colors()) {
+        printf("Your terminal does not support color!\n");
+        return EXIT_FAILURE;
     }
+    start_color();
+    cbreak();
+    noecho();
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+    mouseinterval(0);
+    curs_set(0);
 
-    endwin();
+    Game g = make_game();
+    run_game_gui(&g);
+
     return EXIT_SUCCESS;
 }

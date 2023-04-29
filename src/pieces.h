@@ -6,13 +6,13 @@
 #include <stdbool.h>
 
 typedef enum {
-    EMPTY_SQUARE = 0,
-    PAWN = 4,
-    KNIGHT = 8,
-    BISHOP = 16,
-    ROOK = 32,
-    QUEEN = 64,
-    KING = 128
+    EMPTY_SQUARE = 0x0,
+    PAWN = 0x4,
+    KNIGHT = 0x8,
+    BISHOP = 0x10,
+    ROOK = 0x20,
+    QUEEN = 0x40,
+    KING = 0x80
 } PieceType;
 
 int get_piece_owner(int piece) {
