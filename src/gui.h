@@ -14,8 +14,6 @@ void new_game_window(Game g) {
     // win_body = new_win_body();
     new_win_board(g);
     new_win_info();
-    is_board_focused = true;
-    // win_dialog = new_win_dialog();
 }
 
 void del_game_window(void) {
@@ -25,26 +23,46 @@ void del_game_window(void) {
     delwin(win_dialog);
 }
 
-void popup_dialog_event(void) {}
-
 void run_game_gui(Game *g) {
+    is_board_focused = false;
     new_game_window(*g);
+    switch_dialog_mode(DIALOG_START_MODE);
+    new_win_dialog();
     while (1) {
         if (is_board_focused) {
             int ch = wgetch(win_board);
             if (ch == 27) { // Esc or Alt pressed.
                 is_board_focused = false;
-                popup_dialog_event();
+                switch_dialog_mode(DIALOG_MID_MODE);
+                new_win_dialog();
             } else {
                 bool board_state_is_updated = board_driver(ch, g);
                 if (board_state_is_updated)
                     update_info_event(*g);
             }
         } else {
-            dialog_driver(wgetch(win_dialog), g);
+            int dialog_event_type = dialog_driver(wgetch(win_dialog), g);
+            switch (dialog_event_type) {
+            case DIALOG_START_EVENT:
+                is_board_focused = true;
+                switch_dialog_mode(DIALOG_MID_MODE);
+                refresh();
+                new_game_window(*g);
+                break;
+            case DIALOG_RESTART_EVENT:
+                init_game(g);
+            case DIALOG_RESUME_EVENT:
+                is_board_focused = true;
+                refresh();
+                new_game_window(*g);
+                break;
+            case DIALOG_EXIT_EVENT:
+                goto teardown;
+            }
         }
     }
 
+teardown:
     del_game_window();
     endwin();
 }

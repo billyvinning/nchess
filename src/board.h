@@ -44,11 +44,15 @@ typedef struct {
     int meta;
 } Game;
 
+void init_game(Game *g) {
+    g->move_number = 1;
+    init_board(g->b);
+    g->meta = init_game_meta();
+}
+
 Game make_game(void) {
     Game g;
-    g.move_number = 1;
-    init_board(g.b);
-    g.meta = init_game_meta();
+    init_game(&g);
     return g;
 }
 
