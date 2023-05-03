@@ -42,6 +42,8 @@ typedef struct {
     int move_number;
     board b;
     int meta;
+    int n_white_half_points;
+    int n_black_half_points;
 } Game;
 
 void init_game(Game *g) {
@@ -53,6 +55,8 @@ void init_game(Game *g) {
 Game make_game(void) {
     Game g;
     init_game(&g);
+    g.n_white_half_points = 0;
+    g.n_black_half_points = 0;
     return g;
 }
 
@@ -230,6 +234,7 @@ void update_check_flags(Game *g) {
             g->meta |= WHITE_IN_CHECK;
         if (is_in_mate(*g, WHITE)) {
             g->meta |= WHITE_IN_MATE;
+            g->n_black_half_points += 2;
         }
     } else {
         if (g->meta & WHITE_IN_CHECK)
@@ -241,6 +246,7 @@ void update_check_flags(Game *g) {
             g->meta |= BLACK_IN_CHECK;
         if (is_in_mate(*g, BLACK)) {
             g->meta |= BLACK_IN_MATE;
+            g->n_white_half_points += 2;
         }
     } else {
         if (g->meta & BLACK_IN_CHECK)

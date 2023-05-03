@@ -26,6 +26,12 @@ typedef enum {
     BLACK_HIGHLIGHTED_TILE = 0x10
 } TileBackgroundType;
 
+enum {
+    BOARD_NULL_SIGNAL,
+    BOARD_UPDATE_SIGNAL,
+    BOARD_MATE_SIGNAL
+} BoardSignalType;
+
 MEVENT mevent;
 WINDOW *win_board;
 int last_move_type, last_x1, last_y1, last_x2, last_y2;
@@ -152,9 +158,17 @@ void new_win_board(Game g) {
     draw_board(g);
 }
 
-void board_state_update_event(Game g) { draw_board(g); }
+int board_state_update_event(Game g) {
+    draw_board(g);
+    if (g.meta & WHITE_IN_MATE || g.meta & BLACK_IN_MATE)
+        return BOARD_MATE_SIGNAL;
+    return BOARD_UPDATE_SIGNAL;
+}
 
-void board_cursor_update_event(Game g) { draw_board(g); }
+int board_cursor_update_event(Game g) {
+    draw_board(g);
+    return BOARD_NULL_SIGNAL;
+}
 
 bool is_board_move_accepted(Game *g) {
     int x1_t = cursor_x1;
@@ -198,58 +212,53 @@ bool is_tile_selection_accepted(Game g) {
     return has_any_moves;
 }
 
-bool board_selection_update_event(Game *g) {
+int board_selection_update_event(Game *g) {
     if (cursor_x1 == -1 && cursor_y1 == -1) {
         if (is_tile_selection_accepted(*g)) {
             cursor_x1 = cursor_x2;
             cursor_y1 = cursor_y2;
-            board_cursor_update_event(*g);
+            return board_cursor_update_event(*g);
         }
     } else {
         if (is_board_move_accepted(g)) {
             cursor_x1 = -1;
             cursor_y1 = -1;
-            board_state_update_event(*g);
-            return true;
+            return board_state_update_event(*g);
         } else {
             cursor_x1 = -1;
             cursor_y1 = -1;
-            board_cursor_update_event(*g);
+            return board_cursor_update_event(*g);
         }
     }
-    return false;
+    return BOARD_NULL_SIGNAL;
 }
 
-bool board_driver(int ch, Game *g) {
+int board_driver(int ch, Game *g) {
     switch (ch) {
     case KEY_UP:
         if (cursor_y2 == WIN_PADDING)
             cursor_y2 = WIN_HEIGHT - WIN_PADDING - 1;
         else
             cursor_y2--;
-        board_cursor_update_event(*g);
-        break;
+        return board_cursor_update_event(*g);
     case KEY_DOWN:
         if (cursor_y2 == WIN_HEIGHT - WIN_PADDING - 1)
             cursor_y2 = WIN_PADDING;
         else
             cursor_y2++;
-        board_cursor_update_event(*g);
-        break;
+        return board_cursor_update_event(*g);
     case KEY_LEFT:
         if (cursor_x2 == 1)
             cursor_x2 = WIN_WIDTH - WIN_PADDING - TILE_WIDTH;
         else
             cursor_x2 -= TILE_WIDTH;
-        board_cursor_update_event(*g);
-        break;
+        return board_cursor_update_event(*g);
     case KEY_RIGHT:
         if (cursor_x2 >= WIN_WIDTH - WIN_PADDING - TILE_WIDTH)
             cursor_x2 = WIN_PADDING;
         else
             cursor_x2 += TILE_WIDTH;
-        board_cursor_update_event(*g);
-        break;
+        return board_cursor_update_event(*g);
     case KEY_MOUSE:
         if (getmouse(&mevent) == OK) {
             if (mevent.bstate & BUTTON1_PRESSED) {
@@ -272,6 +281,6 @@ bool board_driver(int ch, Game *g) {
     default:
         break;
     }
-    return false;
+    return BOARD_NULL_SIGNAL;
 }
 #endif

@@ -39,12 +39,12 @@ int *curr_mode_choices;
 char **curr_mode_labels;
 int curr_mode;
 
-enum DIALOG_EVENT_TYPES {
-    DIALOG_NULL_EVENT,
-    DIALOG_START_EVENT,
-    DIALOG_RESUME_EVENT,
-    DIALOG_RESTART_EVENT,
-    DIALOG_EXIT_EVENT,
+enum DIALOG_SIGNAL_TYPES {
+    DIALOG_NULL_SIGNAL,
+    DIALOG_START_SIGNAL,
+    DIALOG_RESUME_SIGNAL,
+    DIALOG_RESTART_SIGNAL,
+    DIALOG_EXIT_SIGNAL,
 };
 
 void switch_dialog_mode(int mode) {
@@ -68,13 +68,34 @@ void switch_dialog_mode(int mode) {
     }
 }
 
-void update_win_dialog(void) {
+void hide_win_dialog(void) {
+    wclear(win_dialog);
+    wrefresh(win_dialog);
+}
+
+void update_win_dialog(Game g) {
     int y_offset = 1;
     if (curr_mode == DIALOG_START_MODE) {
         char welcome_msg[] = "nchess 0.1";
         wattron(win_dialog, A_BOLD);
         mvwprintw(win_dialog, y_offset, (WIN_WIDTH - strlen(welcome_msg)) / 2,
                   "%s", welcome_msg);
+        wattroff(win_dialog, A_BOLD);
+        y_offset++;
+    }
+    if (curr_mode == DIALOG_END_MODE) {
+        char winning_msg[WIN_WIDTH];
+        char *winning_colour;
+        if (g.meta & WHITE_IN_MATE)
+            winning_colour = "Black";
+        else if (g.meta & BLACK_IN_MATE)
+            winning_colour = "White";
+        sprintf(winning_msg, "%s wins! %.1f - %.1f", winning_colour,
+                ((float)g.n_white_half_points) / 2,
+                ((float)g.n_black_half_points) / 2);
+        wattron(win_dialog, A_BOLD);
+        mvwprintw(win_dialog, y_offset, (WIN_WIDTH - strlen(winning_msg)) / 2,
+                  "%s", winning_msg);
         wattroff(win_dialog, A_BOLD);
         y_offset++;
     }
@@ -90,53 +111,54 @@ void update_win_dialog(void) {
     wrefresh(win_dialog);
 }
 
-void new_win_dialog(void) {
+void new_win_dialog(Game g) {
     int starty = (LINES - WIN_HEIGHT) / 2 + WIN_HEIGHT;
     int startx = ((COLS - WIN_WIDTH) / 2);
-    int height_offset = curr_mode == DIALOG_START_MODE ? 1 : 0;
+    int height_offset =
+        curr_mode == DIALOG_START_MODE || curr_mode == DIALOG_END_MODE ? 1 : 0;
     win_dialog = newwin(n_curr_mode_choices + height_offset + 2, WIN_WIDTH,
                         starty, startx);
     keypad(win_dialog, TRUE);
     box(win_dialog, 0, 0);
-    update_win_dialog();
+    update_win_dialog(g);
 }
 
-int dialog_selection_update_event(void) {
-    update_win_dialog();
-    return DIALOG_NULL_EVENT;
+int dialog_selection_update_event(Game g) {
+    update_win_dialog(g);
+    return DIALOG_NULL_SIGNAL;
 }
 
 int dialog_startmode_selection_event(void) {
     switch (curr_mode_choices[dialog_cursor_i]) {
     case STARTMODE_START_GAME:
-        return DIALOG_START_EVENT;
+        return DIALOG_START_SIGNAL;
     case STARTMODE_EXIT:
-        return DIALOG_EXIT_EVENT;
+        return DIALOG_EXIT_SIGNAL;
     default:
-        return DIALOG_NULL_EVENT;
+        return DIALOG_NULL_SIGNAL;
     }
 }
 
 int dialog_midmode_selection_event(void) {
     switch (curr_mode_choices[dialog_cursor_i]) {
     case MIDMODE_RESUME:
-        return DIALOG_RESUME_EVENT;
+        return DIALOG_RESUME_SIGNAL;
     case MIDMODE_RESTART:
-        return DIALOG_RESTART_EVENT;
+        return DIALOG_RESTART_SIGNAL;
     case MIDMODE_EXIT:
-        return DIALOG_EXIT_EVENT;
+        return DIALOG_EXIT_SIGNAL;
     default:
-        return DIALOG_NULL_EVENT;
+        return DIALOG_NULL_SIGNAL;
     }
 }
 int dialog_endmode_selection_event(void) {
     switch (curr_mode_choices[dialog_cursor_i]) {
     case ENDMODE_RESTART:
-        return DIALOG_START_EVENT;
+        return DIALOG_RESTART_SIGNAL;
     case ENDMODE_EXIT:
-        return DIALOG_EXIT_EVENT;
+        return DIALOG_EXIT_SIGNAL;
     default:
-        return DIALOG_NULL_EVENT;
+        return DIALOG_NULL_SIGNAL;
     }
 }
 
@@ -154,13 +176,13 @@ int dialog_selection_event(void) {
 int dialog_driver(int ch, Game *g) {
     switch (ch) {
     case KEY_UP:
-        if (dialog_cursor_i-- <= 0)
-            dialog_cursor_i = n_curr_mode_choices - 1;
-        return dialog_selection_update_event();
+        if (dialog_cursor_i > 0)
+            dialog_cursor_i--;
+        return dialog_selection_update_event(*g);
     case KEY_DOWN:
-        if (dialog_cursor_i++ >= (n_curr_mode_choices - 1))
-            dialog_cursor_i = 0;
-        return dialog_selection_update_event();
+        if (dialog_cursor_i < (n_curr_mode_choices - 1))
+            dialog_cursor_i++;
+        return dialog_selection_update_event(*g);
     case '\n':
     case ' ':
         return dialog_selection_event();
