@@ -2,8 +2,6 @@
 #define PIECES_H
 
 #include "players.h"
-#include <math.h>
-#include <stdbool.h>
 
 typedef enum {
     EMPTY_SQUARE = 0x0,

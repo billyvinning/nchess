@@ -76,7 +76,7 @@ void hide_win_dialog(void) {
 void update_win_dialog(Game g) {
     int y_offset = 1;
     if (curr_mode == DIALOG_START_MODE) {
-        char welcome_msg[] = "nchess 0.1";
+        char welcome_msg[] = "nchess 1.0";
         wattron(win_dialog, A_BOLD);
         mvwprintw(win_dialog, y_offset, (WIN_WIDTH - strlen(welcome_msg)) / 2,
                   "%s", welcome_msg);

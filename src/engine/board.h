@@ -1,17 +1,13 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include <math.h>
-#include <ncurses.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "game.h"
 #include "geom.h"
 #include "pieces.h"
 #include "players.h"
 #include "rules.h"
+#include <stdbool.h>
+#include <stdlib.h>
 
 void init_board(board b) {
 

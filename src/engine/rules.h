@@ -4,7 +4,8 @@
 #include "game.h"
 #include "geom.h"
 #include "pieces.h"
-#include <math.h>
+#include "players.h"
+#include <stdbool.h>
 
 #define ADJ_M_WIDTH N_RANKS *N_FILES
 

@@ -2,7 +2,6 @@
 #define GAME_H
 
 #include "geom.h"
-#include <stdio.h>
 
 typedef enum {
     NULL_META = 0x00,
