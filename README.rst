@@ -1,8 +1,13 @@
+
 nchess
 ======
 
 Chess in the terminal, written in C99.
 
+.. image:: preview.gif
+  :width: 400
+  :alt: Preview gameplay.
+  
 Currently, this project is only capable of player vs. player play in the same terminal; though there are future plans for human vs. computer support.
 
 Build
